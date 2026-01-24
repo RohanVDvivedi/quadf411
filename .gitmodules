@@ -1,0 +1,6 @@
+[submodule "deps/STM32CubeF4"]
+	path = deps/STM32CubeF4
+	url = https://github.com/STMicroelectronics/STM32CubeF4.git
+[submodule "deps/capp"]
+	path = deps/capp
+	url = https://github.com/RohanVDvivedi/c_template_application.git
