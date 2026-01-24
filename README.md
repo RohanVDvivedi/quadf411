@@ -1,5 +1,11 @@
-# STM32F411CEU6 HAL SAMPLE
-A sample project to show how to build a modular STM32 HAL-supported application for the black pill board.
+# quadf411
+A quadcopter flight controller firmware project built using a stm32f411ceu6 based black pill board.
+Uses
+ * adxl345
+ * itg3205
+ * hmc5883l
+ * neo6m
+ * fsia6b (i-bus mode)
 
 ## Setup instructions
 **Install dependencies :**
@@ -10,10 +16,10 @@ A sample project to show how to build a modular STM32 HAL-supported application 
  * No need to worry about the rest, as they would be managed by submodules.
 
 **Download source code :**
- * `git clone --recurse-submodules https://github.com/RohanVDvivedi/stm32f411ceu6_hal_sample.git`
+ * `git clone --recurse-submodules https://github.com/RohanVDvivedi/quadf411.git`
 
 **Build from source :**
- * `cd stm32f411ceu6_hal_sample`
+ * `cd quadf411`
  * `make dependencies` *only when you modify a dependency*
  * `make all` *only when you modify the project source*
 
