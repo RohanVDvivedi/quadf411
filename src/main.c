@@ -34,7 +34,7 @@ int main(void)
 	// setup UART at baud of 115200
 	UART1_Init(&huart1);
 
-	HAL_UART_Transmit(&huart1, (uint8_t *)"START\n", 5, HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart1, (uint8_t *)"START\n", 6, HAL_MAX_DELAY);
 
 	uint32_t delay_ms = 2000;
 	while(1)
