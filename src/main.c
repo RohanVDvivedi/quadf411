@@ -19,6 +19,8 @@ static void SystemClock_Config(void);
 static void GPIO_Init(void);
 static void UART1_Init(UART_HandleTypeDef* huart1);
 
+const char buffer[] = "Hello world!!\n";
+
 int main(void)
 {
 	HAL_Init();
@@ -32,6 +34,8 @@ int main(void)
 	// setup UART at baud of 115200
 	UART1_Init(&huart1);
 
+	HAL_UART_Transmit(&huart1, (uint8_t *)"START\n", 5, HAL_MAX_DELAY);
+
 	uint32_t delay_ms = 2000;
 	while(1)
 	{
@@ -39,9 +43,8 @@ int main(void)
 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 
 		// print hello world on UART
-		char* buffer = "Hello world!!\n";
-		HAL_UART_Transmit(&huart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
-		//HAL_UART_Transmit_IT(&huart1, (uint8_t *)buffer, strlen(buffer));
+		//HAL_UART_Transmit(&huart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
+		HAL_UART_Transmit_IT(&huart1, (uint8_t *)buffer, strlen(buffer));
 
 		HAL_Delay(delay_ms);
 	}
