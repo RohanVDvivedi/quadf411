@@ -44,15 +44,15 @@ int main(void)
 
 	while(uart_tx_ready == 0);
 	uart_tx_ready = 0;
-	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"START\r\n", 7);
+	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"START\n", 6);
 
 	while(uart_tx_ready == 0);
 	uart_tx_ready = 0;
-	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"STARTING\r\n", 10);
+	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"STARTING\n", 9);
 
 	while(uart_tx_ready == 0);
 	uart_tx_ready = 0;
-	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"STARTED\r\n", 9);
+	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"STARTED\n", 8);
 
 	uint32_t delay_ms = 2000;
 	while(1)
@@ -64,7 +64,7 @@ int main(void)
 		if(uart_tx_ready)
 		{
 			uart_tx_ready = 0;  // mark busy
-			HAL_UART_Transmit_IT(&huart1, (uint8_t *)"Hello world!!\r\n", 15);
+			HAL_UART_Transmit_IT(&huart1, (uint8_t *)"Hello world!!\n", 14);
 		}
 
 		HAL_Delay(delay_ms);
