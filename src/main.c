@@ -15,11 +15,19 @@ void USART1_IRQHandler(void)
 	HAL_UART_IRQHandler(&huart1);
 }
 
+// Callback when IT transmit completes
+volatile uint8_t uart_tx_ready = 1;  // simple flag
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if(huart->Instance == USART1)
+    {
+        uart_tx_ready = 1;  // mark ready
+    }
+}
+
 static void SystemClock_Config(void);
 static void GPIO_Init(void);
 static void UART1_Init(UART_HandleTypeDef* huart1);
-
-char* buffer = "Hello world!!\n";
 
 int main(void)
 {
@@ -34,7 +42,17 @@ int main(void)
 	// setup UART at baud of 115200
 	UART1_Init(&huart1);
 
-	HAL_UART_Transmit(&huart1, (uint8_t *)"START\n", 6, HAL_MAX_DELAY);
+	while(uart_tx_ready == 0);
+	uart_tx_ready = 0;
+	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"START\r\n", 7);
+
+	while(uart_tx_ready == 0);
+	uart_tx_ready = 0;
+	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"STARTING\r\n", 10);
+
+	while(uart_tx_ready == 0);
+	uart_tx_ready = 0;
+	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"STARTED\r\n", 9);
 
 	uint32_t delay_ms = 2000;
 	while(1)
@@ -43,8 +61,11 @@ int main(void)
 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 
 		// print hello world on UART
-		HAL_UART_Transmit(&huart1, (uint8_t *)"IT : \n", 6, HAL_MAX_DELAY);
-		if(huart1.gState == HAL_UART_STATE_READY)HAL_UART_Transmit_IT(&huart1, (uint8_t *)buffer, strlen(buffer));
+		if(uart_tx_ready)
+		{
+			uart_tx_ready = 0;  // mark busy
+			HAL_UART_Transmit_IT(&huart1, (uint8_t *)"Hello world!!\r\n", 15);
+		}
 
 		HAL_Delay(delay_ms);
 	}
