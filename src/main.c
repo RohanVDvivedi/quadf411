@@ -40,11 +40,8 @@ int main(void)
 
 		// print hello world on UART
 		char* buffer = "Hello world!!\n";
-		HAL_UART_Transmit_IT(
-			&huart1,
-			(uint8_t *)buffer,
-			strlen(buffer)
-		);
+		HAL_UART_Transmit(&huart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
+		//HAL_UART_Transmit_IT(&huart1, (uint8_t *)buffer, strlen(buffer));
 
 		HAL_Delay(delay_ms);
 	}
