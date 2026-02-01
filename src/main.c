@@ -44,15 +44,15 @@ int main(void)
 
 	while(uart_tx_ready == 0);
 	uart_tx_ready = 0;
-	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"START\n", 6);
+	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"S", 1);
 
 	while(uart_tx_ready == 0);
 	uart_tx_ready = 0;
-	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"STARTING\n", 9);
+	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"T", 1);
 
 	while(uart_tx_ready == 0);
 	uart_tx_ready = 0;
-	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"STARTED\n", 8);
+	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"S\n", 2);
 
 	uint32_t delay_ms = 2000;
 	while(1)
