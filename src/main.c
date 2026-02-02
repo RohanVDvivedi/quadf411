@@ -1,6 +1,7 @@
 #include"stm32f4xx.h"               // device header
 #include"stm32f4xx_hal.h"           // main HAL header
 
+#include<stdio.h>
 #include<string.h>
 
 void SysTick_Handler(void)
@@ -15,19 +16,36 @@ void USART1_IRQHandler(void)
 	HAL_UART_IRQHandler(&huart1);
 }
 
-// Callback when IT transmit completes
-volatile uint8_t uart_tx_ready = 1;  // simple flag
+volatile uint8_t uart_tx_ready = 1;
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
-    if(huart->Instance == USART1)
-    {
-        uart_tx_ready = 1;  // mark ready
-    }
+	if(huart->Instance == USART1)
+		uart_tx_ready = 1;
+}
+
+I2C_HandleTypeDef hi2c1;
+
+void I2C1_EV_IRQHandler(void)
+{
+	HAL_I2C_EV_IRQHandler(&hi2c1);
+}
+
+void I2C1_ER_IRQHandler(void)
+{
+	HAL_I2C_ER_IRQHandler(&hi2c1);
+}
+
+volatile uint8_t i2c_tx_ready = 1;
+void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	if(hi2c->Instance == I2C1)
+		i2c_tx_ready = 1;
 }
 
 static void SystemClock_Config(void);
 static void GPIO_Init(void);
 static void UART1_Init(UART_HandleTypeDef* huart1);
+static void I2C1_Init(I2C_HandleTypeDef* hi2c1);
 
 int main(void)
 {
@@ -42,7 +60,36 @@ int main(void)
 	// setup UART at baud of 115200
 	UART1_Init(&huart1);
 
-	while(uart_tx_ready == 0);
+	// setup I2C at baud of 100000
+	I2C1_Init(&hi2c1);
+
+	const char* i2c_devices[] = {
+		"adxl345",
+		"itg3205",
+		"hmc5883l",
+		"ms5611"
+	};
+
+	const uint8_t i2c_addresses[] = {
+		0x53,
+		0x68,
+		0x1e,
+		0x77
+	};
+
+	for(int i = 0; i < sizeof(i2c_addresses)/sizeof(i2c_addresses[0]); i++)
+	{
+		char buffer[100];
+		if(HAL_I2C_IsDeviceReady(&hi2c1, i2c_addresses[i] << 1, 3, 10) == HAL_OK)
+			sprintf(buffer, "%s @ %hhx : detected\n", i2c_devices[i], i2c_addresses[i]);
+		else
+			sprintf(buffer, "%s @ %hhx : absent\n", i2c_devices[i], i2c_addresses[i]);
+		HAL_UART_Transmit(&huart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
+	}
+
+	while(1);
+
+	/*while(uart_tx_ready == 0);
 	uart_tx_ready = 0;
 	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"S", 1);
 
@@ -68,7 +115,7 @@ int main(void)
 		}
 
 		HAL_Delay(delay_ms);
-	}
+	}*/
 }
 
 /* ---------------- clock ---------------- */
@@ -161,4 +208,38 @@ static void UART1_Init(UART_HandleTypeDef* huart1)
 
 	HAL_NVIC_SetPriority(USART1_IRQn, 5, 0);
 	HAL_NVIC_EnableIRQ(USART1_IRQn);
+}
+
+/* ---------------- I2C ---------------- */
+
+static void I2C1_Init(I2C_HandleTypeDef* hi2c1)
+{
+	__HAL_RCC_I2C1_CLK_ENABLE();
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+
+	GPIO_InitTypeDef gpio = {0};
+	gpio.Pin       = GPIO_PIN_8 | GPIO_PIN_9;
+	gpio.Mode      = GPIO_MODE_AF_OD;
+	gpio.Pull      = GPIO_PULLUP;
+	gpio.Speed     = GPIO_SPEED_FREQ_VERY_HIGH;
+	gpio.Alternate = GPIO_AF4_I2C1;
+	HAL_GPIO_Init(GPIOB, &gpio);
+
+	hi2c1->Instance = I2C1;
+	hi2c1->Init.ClockSpeed = 100000;
+	hi2c1->Init.DutyCycle = I2C_DUTYCYCLE_2;
+	hi2c1->Init.OwnAddress1 = 0;
+	hi2c1->Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+	hi2c1->Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+	hi2c1->Init.OwnAddress2 = 0;
+	hi2c1->Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+	hi2c1->Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+
+	HAL_I2C_Init(hi2c1);
+
+	HAL_NVIC_SetPriority(I2C1_EV_IRQn, 5, 0);
+	HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
+
+	HAL_NVIC_SetPriority(I2C1_ER_IRQn, 5, 0);
+	HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
 }
