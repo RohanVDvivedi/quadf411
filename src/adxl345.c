@@ -1,6 +1,28 @@
 #include<adxl345.h>
 
-int init_adxl345(adxl345* mod_accl, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, dpipe* i2c_queue, uint32_t range_in_gs, uint32_t period_in_millis);
+int init_adxl345(adxl345* mod_accl, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, dpipe* i2c_queue, uint32_t period_in_millis)
+{
+	mod_accl->hi2c = hi2c;
+	mod_accl->i2c_addr = i2c_addr;
+	mod_accl->state = ADXL345_NOT_STARTED;
+	mod_accl->i2c_queue = i2c_queue;
+	mod_accl->last_read_in_millis = HAL_GetTick();
+	mod_accl->period_in_millis = period_in_millis;
+
+	if(HAL_I2C_IsDeviceReady(hi2c, i2c_addr << 1, 3, 100) != HAL_OK)
+		return 0;
+
+	// run the sensor at full speed, regardless of our readin rate
+	HAL_I2C_Mem_Write(hi2c, (mod_accl->i2c_addr) << 1, 0x2c, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x0f}), 1, HAL_MAX_DELAY);
+
+	// put it in full res mode
+	HAL_I2C_Mem_Write(hi2c, (mod_accl->i2c_addr) << 1, 0x31, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x0b}), 1, HAL_MAX_DELAY);
+
+	// put it in measureing mode
+	HAL_I2C_Mem_Write(hi2c, (mod_accl->i2c_addr) << 1, 0x2d, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x08}), 1, HAL_MAX_DELAY);
+
+	return 1;
+}
 
 void maybe_data_ready_adxl345(adxl345* mod_accl)
 {
