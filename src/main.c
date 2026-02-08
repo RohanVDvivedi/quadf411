@@ -91,19 +91,19 @@ int main(void)
 	dpipe i2c_sensor_queue;
 	initialize_dpipe_with_memory(&i2c_sensor_queue, I2C_SENSOR_QUEUE_CAPACITY, i2c_sensor_queue_buffer);
 
-	if(!init_adxl345(&mod_accl, &hi2c1, 0x53, &i2c_sensor_queue, 5)) // collect samples every 5 millis
+	if(!init_adxl345(&mod_accl, &hi2c1, 0x53, &i2c_sensor_queue, 4)) // collect samples every 4 millis -> 250 Hz
 	{
 		HAL_UART_Transmit(&huart1, (uint8_t *)("could not init adxl345\n"), strlen("could not init adxl345\n"), HAL_MAX_DELAY);
 		while(1);
 	}
 
-	if(!init_itg3205(&mod_gyro, &hi2c1, 0x68, &i2c_sensor_queue, 5)) // collect samples every 5 millis
+	if(!init_itg3205(&mod_gyro, &hi2c1, 0x68, &i2c_sensor_queue, 2)) // collect samples every 2 millis -> 500 Hz
 	{
 		HAL_UART_Transmit(&huart1, (uint8_t *)("could not init itg3205\n"), strlen("could not init itg3205\n"), HAL_MAX_DELAY);
 		while(1);
 	}
 
-	if(!init_hmc5883l(&mod_magn, &hi2c1, 0x1e, &i2c_sensor_queue, 15)) // collect samples every 15 millis
+	if(!init_hmc5883l(&mod_magn, &hi2c1, 0x1e, &i2c_sensor_queue, 15)) // collect samples every 15 millis -> 66 Hz
 	{
 		HAL_UART_Transmit(&huart1, (uint8_t *)("could not init hmc5883l\n"), strlen("could not init hmc5883l\n"), HAL_MAX_DELAY);
 		while(1);
