@@ -164,7 +164,7 @@ int main(void)
 
 		if(HAL_GetTick() >= last_print_at + print_period)
 		{
-			char buffer[200];
+			char buffer[300];
 			sprintf(buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples);
 			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 			last_print_at = HAL_GetTick();
