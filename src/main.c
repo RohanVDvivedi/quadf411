@@ -129,7 +129,7 @@ int main(void)
 		if(new_data_arrived)
 		{
 			accl_samples++;
-			vector_mul_scalar(&accl_data, &_accl_data, 4.0/1000.0);
+			vector_mul_scalar(&accl_data, &_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
 		}
 
 		new_data_arrived = 0;
@@ -137,13 +137,13 @@ int main(void)
 		if(new_data_arrived)
 		{
 			gyro_samples++;
-			vector_mul_scalar(&gyro_data, &_gyro_data, 1.0);
+			vector_mul_scalar(&gyro_data, &_gyro_data, 1.0/14.375); // convert to degrees per second
 		}
 
 		if(HAL_GetTick() >= last_print_at + print_period)
 		{
 			char buffer[200];
-			sprintf(buffer, "ax=%f, ay=%f, az=%f, accl_samples = %d, gx=%f, gy=%f, gz=%f, gyro_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples);
+			sprintf(buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples);
 			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 			last_print_at = HAL_GetTick();
 			accl_samples = 0;

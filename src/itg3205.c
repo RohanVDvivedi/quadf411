@@ -13,13 +13,13 @@ int init_itg3205(itg3205* mod_gyro, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, d
 		return 0;
 
 	// run the sensor at full speed, regardless of our reading rate
-	HAL_I2C_Mem_Write(hi2c, (mod_gyro->i2c_addr) << 1, 0x2c, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x0f}), 1, HAL_MAX_DELAY);
+	HAL_I2C_Mem_Write(hi2c, (mod_gyro->i2c_addr) << 1, 0x16, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x18}), 1, HAL_MAX_DELAY);
 
-	// put it in full res mode at 4g
-	HAL_I2C_Mem_Write(hi2c, (mod_gyro->i2c_addr) << 1, 0x31, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x09}), 1, HAL_MAX_DELAY);
+	// put it to externally sample as fast as possible
+	HAL_I2C_Mem_Write(hi2c, (mod_gyro->i2c_addr) << 1, 0x15, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x00}), 1, HAL_MAX_DELAY);
 
-	// put it in measuring mode
-	HAL_I2C_Mem_Write(hi2c, (mod_gyro->i2c_addr) << 1, 0x2d, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x08}), 1, HAL_MAX_DELAY);
+	// turn it on with some axis gyro to provide it with clock
+	HAL_I2C_Mem_Write(hi2c, (mod_gyro->i2c_addr) << 1, 0x3e, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x01}), 1, HAL_MAX_DELAY);
 
 	return 1;
 }
