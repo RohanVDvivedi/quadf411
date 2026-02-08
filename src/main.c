@@ -116,7 +116,9 @@ int main(void)
 
 		vector _accl_data = get_adxl345(&mod_accl, &new_data_arrived);
 		if(new_data_arrived)
-			accl_data = _accl_data;
+		{
+			vector_mul_scalar(&accl_data, &_accl_data, 4.0/1000.0);
+		}
 
 		samples += new_data_arrived;
 
