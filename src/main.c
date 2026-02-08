@@ -113,7 +113,7 @@ int main(void)
 
 		samples += new_data_arrived;
 
-		if(last_print_at + print_period >= HAL_GetTick())
+		if(HAL_GetTick() >= last_print_at + print_period)
 		{
 			char buffer[100];
 			sprintf(buffer, "ax=%f, ay=%f, az=%f, samples = %d\n", accl_data.xi, accl_data.yj, accl_data.zk, samples);
