@@ -101,6 +101,8 @@ int main(void)
 	uint32_t last_print_at = HAL_GetTick();
 	uint32_t print_period = 100; // print every 100 millis
 
+	int samples = 0;
+
 	while(1)
 	{
 		int new_data_arrived = 0;
@@ -109,12 +111,15 @@ int main(void)
 		if(new_data_arrived)
 			accl_data = _accl_data;
 
+		samples += new_data_arrived;
+
 		if(last_print_at + print_period >= HAL_GetTick())
 		{
 			char buffer[100];
-			sprintf(buffer, "ax=%f, ay=%f, az=%f\n", accl_data.xi, accl_data.yj, accl_data.zk);
+			sprintf(buffer, "ax=%f, ay=%f, az=%f, samples = %d\n", accl_data.xi, accl_data.yj, accl_data.zk, samples);
 			HAL_UART_Transmit(&huart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
 			last_print_at = HAL_GetTick();
+			samples = 0;
 		}
 	}
 
