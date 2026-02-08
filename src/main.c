@@ -159,7 +159,7 @@ int main(void)
 		if(new_data_arrived)
 		{
 			magn_samples++;
-			vector_mul_scalar(&magn_data, &_magn_data, 1.0/14.375); // convert to the range of 1 Ga
+			vector_mul_scalar(&magn_data, &_magn_data, 0.92); // convert to the range of 1 Ga
 		}
 
 		if(HAL_GetTick() >= last_print_at + print_period)
