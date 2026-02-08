@@ -21,7 +21,9 @@ vector get_adxl345(adxl345* mod_accl, int* new_data_arrived)
 		{
 			// queue read request to dpipe
 			{
-				write_to_dpipe(mod_accl->i2c_queue, &(mod_accl->i2c_addr), 1, ALL_OR_NONE);
+				__disable_irq();
+					write_to_dpipe(mod_accl->i2c_queue, &(mod_accl->i2c_addr), 1, ALL_OR_NONE);
+				__enable_irq();
 				mod_accl->state = ADXL345_READ_QUEUED;
 			}
 
@@ -30,7 +32,9 @@ vector get_adxl345(adxl345* mod_accl, int* new_data_arrived)
 		case ADXL345_READ_QUEUED :
 		{
 			uint8_t buffer[1];
-			cy_uint bytes_read = peek_from_dpipe(mod_accl->i2c_queue, buffer, 1, ALL_OR_NONE);
+			__disable_irq();
+				cy_uint bytes_read = peek_from_dpipe(mod_accl->i2c_queue, buffer, 1, ALL_OR_NONE);
+			__enable_irq();
 			if(bytes_read > 0 && buffer[0] == mod_accl->i2c_addr)
 			{
 				// we are at the top of the queue, so schedule this read
@@ -73,7 +77,9 @@ vector get_adxl345(adxl345* mod_accl, int* new_data_arrived)
 			if(HAL_GetTick() >= mod_accl->last_read_in_millis + mod_accl->read_period_in_millis)
 			{
 				// queue read request to dpipe
-				write_to_dpipe(mod_accl->i2c_queue, &(mod_accl->i2c_addr), 1, ALL_OR_NONE);
+				__disable_irq();
+					write_to_dpipe(mod_accl->i2c_queue, &(mod_accl->i2c_addr), 1, ALL_OR_NONE);
+				__enable_irq();
 				mod_accl->state = ADXL345_READ_QUEUED;
 			}
 
