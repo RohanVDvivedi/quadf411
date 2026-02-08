@@ -41,7 +41,14 @@ void I2C1_ER_IRQHandler(void)
 	HAL_I2C_ER_IRQHandler(&hi2c1);
 }
 
-volatile uint8_t i2c_tx_ready = 1;
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	if(hi2c->Instance == I2C1)
+	{
+		maybe_data_ready_adxl345(&mod_accl);
+	}
+}
+
 void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
 	if(hi2c->Instance == I2C1)
@@ -117,7 +124,7 @@ int main(void)
 		{
 			char buffer[100];
 			sprintf(buffer, "ax=%f, ay=%f, az=%f, samples = %d\n", accl_data.xi, accl_data.yj, accl_data.zk, samples);
-			HAL_UART_Transmit(&huart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
+			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 			last_print_at = HAL_GetTick();
 			samples = 0;
 		}
