@@ -1,0 +1,22 @@
+* setup state machine for capturing data from ms5611
+* setup for capturing data from ibus receiver (UART)
+* setup for capturing + parsing gps data and setup the board (UART)
+
+* use 1 UART for debugging through bluetooth
+* add a battery to debug remotely
+
+* set up atleast 6-8 motor pwn pins controllers
+* test thier working with standard servos
+
+* get PCB printed OR solidify loose wires
+* PCB must have 3 + additional mounting holes
+
+* store raw accl/gyro/magn data
+* make pitch and roll angle estimation using accl and gyro
+* make yaw x-axis direction estimation using magn (component-int out in global x-y plane) and gyro
+
+* compute velocity in local directions by integration
+* compute corresponding velocities in global axis
+* use accl + ms5611 (for z axis velocity) + gps (for lat-long plane velocity)
+
+* get altitude raw from ms5611 + accl (for correct throttle control)
