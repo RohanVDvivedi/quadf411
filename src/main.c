@@ -8,9 +8,11 @@
 
 #include<adxl345.h>
 #include<itg3205.h>
+#include<hmc5883l.h>
 
 adxl345 mod_accl;
 itg3205 mod_gyro;
+hmc5883l mod_magn;
 
 void SysTick_Handler(void)
 {
@@ -49,6 +51,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 	{
 		maybe_data_ready_adxl345(&mod_accl);
 		maybe_data_ready_itg3205(&mod_gyro);
+		maybe_data_ready_hmc5883l(&mod_magn);
 	}
 }
 
@@ -58,6 +61,7 @@ void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
 	{
 		maybe_data_ready_adxl345(&mod_accl);
 		maybe_data_ready_itg3205(&mod_gyro);
+		maybe_data_ready_hmc5883l(&mod_magn);
 	}
 }
 
@@ -99,6 +103,12 @@ int main(void)
 		while(1);
 	}
 
+	if(!init_hmc5883l(&mod_magn, &hi2c1, 0x1e, &i2c_sensor_queue, 15)) // collect samples every 15 millis
+	{
+		HAL_UART_Transmit(&huart1, (uint8_t *)("could not init hmc5883l\n"), strlen("could not init hmc5883l\n"), HAL_MAX_DELAY);
+		while(1);
+	}
+
 	/*const char* i2c_devices[] = {
 		"adxl345",
 		"itg3205",
@@ -115,12 +125,14 @@ int main(void)
 
 	vector accl_data = {};
 	vector gyro_data = {};
+	vector magn_data = {};
 
 	uint32_t last_print_at = HAL_GetTick();
 	uint32_t print_period = 100; // print every 100 millis
 
 	int accl_samples = 0;
 	int gyro_samples = 0;
+	int magn_samples = 0;
 
 	while(1)
 	{
@@ -142,14 +154,23 @@ int main(void)
 			vector_mul_scalar(&gyro_data, &_gyro_data, 1.0/14.375); // convert to degrees per second
 		}
 
+		new_data_arrived = 0;
+		vector _magn_data = get_hmc5883l(&mod_magn, &new_data_arrived);
+		if(new_data_arrived)
+		{
+			magn_samples++;
+			vector_mul_scalar(&magn_data, &_magn_data, 1.0/14.375); // convert to the range of 1 Ga
+		}
+
 		if(HAL_GetTick() >= last_print_at + print_period)
 		{
 			char buffer[200];
-			sprintf(buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples);
+			sprintf(buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples);
 			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 			last_print_at = HAL_GetTick();
 			accl_samples = 0;
 			gyro_samples = 0;
+			magn_samples = 0;
 		}
 	}
 

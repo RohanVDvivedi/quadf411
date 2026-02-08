@@ -82,8 +82,8 @@ vector get_hmc5883l(hmc5883l* mod_magn, int* new_data_arrived)
 			// transform read_buffer -> data in vector
 			// note: the byte ordering is not x,y,z
 			mod_magn->data.xi = (int16_t)((((int16_t)(mod_magn->read_buffer[0]))<<8) | ((int16_t)(mod_magn->read_buffer[1])));
-			mod_magn->data.zj = (int16_t)((((int16_t)(mod_magn->read_buffer[2]))<<8) | ((int16_t)(mod_magn->read_buffer[3])));
-			mod_magn->data.yk = (int16_t)((((int16_t)(mod_magn->read_buffer[4]))<<8) | ((int16_t)(mod_magn->read_buffer[5])));
+			mod_magn->data.zk = (int16_t)((((int16_t)(mod_magn->read_buffer[2]))<<8) | ((int16_t)(mod_magn->read_buffer[3])));
+			mod_magn->data.yj = (int16_t)((((int16_t)(mod_magn->read_buffer[4]))<<8) | ((int16_t)(mod_magn->read_buffer[5])));
 
 			// record the millis when last read was done by the user
 			mod_magn->last_read_in_millis = HAL_GetTick();
