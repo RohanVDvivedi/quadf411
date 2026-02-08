@@ -114,6 +114,7 @@ int main(void)
 			char buffer[100];
 			sprintf(buffer, "ax=%f, ay=%f, az=%f\n", accl_data.xi, accl_data.yj, accl_data.zk);
 			HAL_UART_Transmit(&huart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
+			last_print_at = HAL_GetTick();
 		}
 	}
 
