@@ -7,8 +7,10 @@
 #include<cutlery/dpipe.h>
 
 #include<adxl345.h>
+#include<itg3205.h>
 
 adxl345 mod_accl;
+itg3205 mod_gyro;
 
 void SysTick_Handler(void)
 {
@@ -85,7 +87,13 @@ int main(void)
 
 	if(!init_adxl345(&mod_accl, &hi2c1, 0x53, &i2c_sensor_queue, 5)) // collect samples every 5 millis
 	{
-		HAL_UART_Transmit(&huart1, (uint8_t *)("could not init adxl345"), strlen("could not init adxl345"), HAL_MAX_DELAY);
+		HAL_UART_Transmit(&huart1, (uint8_t *)("could not init adxl345\n"), strlen("could not init adxl345\n"), HAL_MAX_DELAY);
+		while(1);
+	}
+
+	if(!init_itg3205(&mod_gyro, &hi2c1, 0x68, &i2c_sensor_queue, 5)) // collect samples every 5 millis
+	{
+		HAL_UART_Transmit(&huart1, (uint8_t *)("could not init itg3205\n"), strlen("could not init itg3205\n"), HAL_MAX_DELAY);
 		while(1);
 	}
 
@@ -104,31 +112,42 @@ int main(void)
 	};*/
 
 	vector accl_data = {};
+	vector gyro_data = {};
 
 	uint32_t last_print_at = HAL_GetTick();
 	uint32_t print_period = 100; // print every 100 millis
 
-	int samples = 0;
+	int accl_samples = 0;
+	int gyro_samples = 0;
 
 	while(1)
 	{
-		int new_data_arrived = 0;
+		int new_data_arrived;
 
+		new_data_arrived = 0;
 		vector _accl_data = get_adxl345(&mod_accl, &new_data_arrived);
 		if(new_data_arrived)
 		{
+			accl_samples++;
 			vector_mul_scalar(&accl_data, &_accl_data, 4.0/1000.0);
 		}
 
-		samples += new_data_arrived;
+		new_data_arrived = 0;
+		vector _gyro_data = get_itg3205(&mod_gyro, &new_data_arrived);
+		if(new_data_arrived)
+		{
+			gyro_samples++;
+			vector_mul_scalar(&gyro_data, &_gyro_data, 1.0);
+		}
 
 		if(HAL_GetTick() >= last_print_at + print_period)
 		{
-			char buffer[100];
-			sprintf(buffer, "ax=%f, ay=%f, az=%f, samples = %d\n", accl_data.xi, accl_data.yj, accl_data.zk, samples);
+			char buffer[200];
+			sprintf(buffer, "ax=%f, ay=%f, az=%f, accl_samples = %d, gx=%f, gy=%f, gz=%f, gyro_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples);
 			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 			last_print_at = HAL_GetTick();
-			samples = 0;
+			accl_samples = 0;
+			gyro_samples = 0;
 		}
 	}
 
