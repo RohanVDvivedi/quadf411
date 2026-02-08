@@ -4,3 +4,6 @@
 [submodule "deps/quatro3d"]
 	path = deps/quatro3d
 	url = git@github.com:RohanVDvivedi/Quatro3D.git
+[submodule "deps/cutlery"]
+	path = deps/cutlery
+	url = git@github.com:RohanVDvivedi/Cutlery.git

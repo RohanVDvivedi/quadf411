@@ -19,7 +19,7 @@ BIN_DIR:=./bin
 # include the name of the dependencies to be built here
 # must have the same name submodule directory in ./deps/ and it also must build the library with the same name in it's ./lib directory
 # these must also be in the order from most derieved to the least derieved (the parent most library)
-DEPS:=quatro3d
+DEPS:=quatro3d cutlery
 
 # no OS to return to baremetal application
 USE_NOHOST:=--specs=nosys.specs
