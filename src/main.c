@@ -4,6 +4,12 @@
 #include<stdio.h>
 #include<string.h>
 
+#include<cutlery/dpipe.h>
+
+#include<adxl345.h>
+
+adxl345 mod_accl;
+
 void SysTick_Handler(void)
 {
 	HAL_IncTick();
@@ -39,7 +45,9 @@ volatile uint8_t i2c_tx_ready = 1;
 void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
 	if(hi2c->Instance == I2C1)
-		i2c_tx_ready = 1;
+	{
+		maybe_data_ready_adxl345(&mod_accl);
+	}
 }
 
 static void SystemClock_Config(void);
@@ -63,7 +71,18 @@ int main(void)
 	// setup I2C at baud of 100000
 	I2C1_Init(&hi2c1);
 
-	const char* i2c_devices[] = {
+	#define I2C_SENSOR_QUEUE_CAPACITY 128
+	uint8_t i2c_sensor_queue_buffer[I2C_SENSOR_QUEUE_CAPACITY];
+	dpipe i2c_sensor_queue;
+	initialize_dpipe_with_memory(&i2c_sensor_queue, I2C_SENSOR_QUEUE_CAPACITY, i2c_sensor_queue_buffer);
+
+	if(!init_adxl345(&mod_accl, &hi2c1, 0x53, &i2c_sensor_queue, 5)) // collect samples every 5 millis
+	{
+		HAL_UART_Transmit(&huart1, (uint8_t *)("could not init adxl345"), strlen("could not init adxl345"), HAL_MAX_DELAY);
+		while(1);
+	}
+
+	/*const char* i2c_devices[] = {
 		"adxl345",
 		"itg3205",
 		"hmc5883l",
@@ -75,9 +94,30 @@ int main(void)
 		0x68,
 		0x1e,
 		0x77
-	};
+	};*/
 
-	for(int i = 0; i < sizeof(i2c_addresses)/sizeof(i2c_addresses[0]); i++)
+	vector accl_data = {};
+
+	uint32_t last_print_at = HAL_GetTick();
+	uint32_t print_period = 100; // print every 100 millis
+
+	while(1)
+	{
+		int new_data_arrived = 0;
+
+		vector _accl_data = get_adxl345(&mod_accl, &new_data_arrived);
+		if(new_data_arrived)
+			accl_data = _accl_data;
+
+		if(last_print_at + print_period >= HAL_GetTick())
+		{
+			char buffer[100];
+			sprintf(buffer, "ax=%f, ay=%f, az=%f\n", accl_data.xi, accl_data.yj, accl_data.zk);
+			HAL_UART_Transmit(&huart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
+		}
+	}
+
+	/*for(int i = 0; i < sizeof(i2c_addresses)/sizeof(i2c_addresses[0]); i++)
 	{
 		char buffer[100];
 		if(HAL_I2C_IsDeviceReady(&hi2c1, i2c_addresses[i] << 1, 3, 10) == HAL_OK)
@@ -87,7 +127,7 @@ int main(void)
 		HAL_UART_Transmit(&huart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
 	}
 
-	while(1);
+	while(1);*/
 
 	/*while(uart_tx_ready == 0);
 	uart_tx_ready = 0;

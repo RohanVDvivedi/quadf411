@@ -7,7 +7,7 @@ int init_adxl345(adxl345* mod_accl, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, d
 	mod_accl->state = ADXL345_NOT_STARTED;
 	mod_accl->i2c_queue = i2c_queue;
 	mod_accl->last_read_in_millis = HAL_GetTick();
-	mod_accl->period_in_millis = period_in_millis;
+	mod_accl->read_period_in_millis = period_in_millis;
 
 	if(HAL_I2C_IsDeviceReady(hi2c, i2c_addr << 1, 3, 100) != HAL_OK)
 		return 0;
