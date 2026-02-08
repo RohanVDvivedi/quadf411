@@ -12,13 +12,13 @@ int init_hmc5883l(hmc5883l* mod_magn, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr,
 	if(HAL_I2C_IsDeviceReady(hi2c, i2c_addr << 1, 3, 100) != HAL_OK)
 		return 0;
 
-	// run the sensor at full speed, regardless of our reading rate
+	// sample averaging, and output rate
 	HAL_I2C_Mem_Write(hi2c, (mod_magn->i2c_addr) << 1, 0x00, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x78}), 1, HAL_MAX_DELAY);
 
-	// put it to externally sample as fast as possible
+	// range and gain setting, to suit earth
 	HAL_I2C_Mem_Write(hi2c, (mod_magn->i2c_addr) << 1, 0x01, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x20}), 1, HAL_MAX_DELAY);
 
-	// turn it on with some axis gyro to provide it with clock
+	// continuous sampling mode
 	HAL_I2C_Mem_Write(hi2c, (mod_magn->i2c_addr) << 1, 0x02, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x00}), 1, HAL_MAX_DELAY);
 
 	return 1;
