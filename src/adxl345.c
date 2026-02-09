@@ -26,6 +26,8 @@ int init_adxl345(adxl345* mod_accl, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, d
 
 int maybe_data_ready_adxl345(adxl345* mod_accl)
 {
+	if(mod_accl->state != ADXL345_READ_IN_PROGRESS)
+		return 0;
 	uint8_t buffer[1];
 	cy_uint bytes_read = peek_from_dpipe(mod_accl->i2c_queue, buffer, 1, ALL_OR_NONE);
 	if(bytes_read > 0 && buffer[0] == mod_accl->i2c_addr)

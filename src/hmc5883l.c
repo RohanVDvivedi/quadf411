@@ -26,6 +26,8 @@ int init_hmc5883l(hmc5883l* mod_magn, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr,
 
 int maybe_data_ready_hmc5883l(hmc5883l* mod_magn)
 {
+	if(mod_magn->state != HMC5883L_READ_IN_PROGRESS)
+		return 0;
 	uint8_t buffer[1];
 	cy_uint bytes_read = peek_from_dpipe(mod_magn->i2c_queue, buffer, 1, ALL_OR_NONE);
 	if(bytes_read > 0 && buffer[0] == mod_magn->i2c_addr)

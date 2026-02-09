@@ -49,9 +49,10 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
 	if(hi2c->Instance == I2C1)
 	{
-			maybe_data_ready_adxl345(&mod_accl)
-		||	maybe_data_ready_itg3205(&mod_gyro)
-		||	maybe_data_ready_hmc5883l(&mod_magn);
+		if(maybe_data_ready_adxl345(&mod_accl) || maybe_data_ready_itg3205(&mod_gyro) || maybe_data_ready_hmc5883l(&mod_magn))
+		{
+			asm("");
+		}
 	}
 }
 
@@ -59,9 +60,10 @@ void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
 	if(hi2c->Instance == I2C1)
 	{
-			maybe_data_ready_adxl345(&mod_accl)
-		||	maybe_data_ready_itg3205(&mod_gyro)
-		||	maybe_data_ready_hmc5883l(&mod_magn);
+		if(maybe_data_ready_adxl345(&mod_accl) || maybe_data_ready_itg3205(&mod_gyro) || maybe_data_ready_hmc5883l(&mod_magn))
+		{
+			asm("");
+		}
 	}
 }
 
