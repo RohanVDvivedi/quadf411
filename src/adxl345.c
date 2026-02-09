@@ -24,7 +24,7 @@ int init_adxl345(adxl345* mod_accl, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, d
 	return 1;
 }
 
-void maybe_data_ready_adxl345(adxl345* mod_accl)
+int maybe_data_ready_adxl345(adxl345* mod_accl)
 {
 	uint8_t buffer[1];
 	cy_uint bytes_read = peek_from_dpipe(mod_accl->i2c_queue, buffer, 1, ALL_OR_NONE);
@@ -32,7 +32,9 @@ void maybe_data_ready_adxl345(adxl345* mod_accl)
 	{
 		read_from_dpipe(mod_accl->i2c_queue, buffer, 1, ALL_OR_NONE);
 		mod_accl->state = ADXL345_READ_COMPLETE;
+		return 1;
 	}
+	return 0;
 }
 
 vector get_adxl345(adxl345* mod_accl, int* new_data_arrived)

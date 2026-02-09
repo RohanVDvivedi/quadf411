@@ -44,7 +44,7 @@ struct ms5611
 int init_ms5611(ms5611* mod_baro, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, dpipe* i2c_queue, uint32_t period_in_millis);
 
 // call on i2c txcplt
-void maybe_data_ready_ms5611(ms5611* mod_baro);
+int maybe_data_ready_ms5611(ms5611* mod_baro);
 
 // returns only if new data is available, else returns NULL
 // pushes a new read to dpipe's queue if period has elapsed

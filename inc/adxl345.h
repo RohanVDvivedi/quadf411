@@ -42,7 +42,7 @@ struct adxl345
 int init_adxl345(adxl345* mod_accl, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, dpipe* i2c_queue, uint32_t period_in_millis);
 
 // call on i2c txcplt
-void maybe_data_ready_adxl345(adxl345* mod_accl);
+int maybe_data_ready_adxl345(adxl345* mod_accl);
 
 // returns only if new data is available, else returns NULL
 // pushes a new read to dpipe's queue if period has elapsed

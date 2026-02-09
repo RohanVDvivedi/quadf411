@@ -32,7 +32,9 @@ void maybe_data_ready_itg3205(itg3205* mod_gyro)
 	{
 		read_from_dpipe(mod_gyro->i2c_queue, buffer, 1, ALL_OR_NONE);
 		mod_gyro->state = ITG3205_READ_COMPLETE;
+		return 1;
 	}
+	return 0;
 }
 
 vector get_itg3205(itg3205* mod_gyro, int* new_data_arrived)
