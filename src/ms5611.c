@@ -45,9 +45,7 @@ int maybe_data_ready_ms5611(ms5611* mod_baro)
 	}
 	return 0;
 }
-#include<stdio.h>
-#include<string.h>
-extern UART_HandleTypeDef huart1;
+
 static int64_t ms5611_pressure_pa(uint16_t* C, uint32_t D1, uint32_t D2, int64_t* temp_centi)
 {
 	int64_t dT = (int64_t)D2 - (((int64_t)C[5]) << 8);
