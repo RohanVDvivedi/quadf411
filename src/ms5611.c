@@ -45,14 +45,23 @@ int maybe_data_ready_ms5611(ms5611* mod_baro)
 	}
 	return 0;
 }
-
-static int32_t ms5611_pressure_pa(uint16_t *C, uint32_t D1, uint32_t D2, int32_t *temp_centi)
+#include<stdio.h>
+#include<string.h>
+extern UART_HandleTypeDef huart1;
+static int64_t ms5611_pressure_pa(uint16_t* C, uint32_t D1, uint32_t D2, int64_t* temp_centi)
 {
-	int32_t dT = (int32_t)D2 - ((int32_t)C[5] << 8);
-	int32_t TEMP = 2000 + ((int64_t)dT * C[6]) / (1LL << 23);
+	char buffer[300];
+	sprintf(buffer, "-> %hu, %hu, %hu, %hu, %hu, %hu, %lu, %lu\n", C[1], C[2], C[3], C[4], C[5], C[6], D1, D2);
+	HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 
-	int64_t OFF  = ((int64_t)C[2] << 16) + ((int64_t)C[4] * dT) / (1LL << 7);
-	int64_t SENS = ((int64_t)C[1] << 15) + ((int64_t)C[3] * dT) / (1LL << 8);
+	int64_t dT = (int64_t)D2 - (((int64_t)C[5]) << 8);
+	int64_t TEMP = 2000 + (dT * ((int64_t)C[6])) / (1LL << 23);
+
+	int64_t OFF  = (((int64_t)C[2]) << 16) + (((int64_t)C[4]) * dT) / (1LL << 7);
+	int64_t SENS = (((int64_t)C[1]) << 15) + (((int64_t)C[3]) * dT) / (1LL << 8);
+
+	sprintf(buffer, "-> %lld, %lld, %lld, %lld\n", dT, TEMP, OFF, SENS);
+	HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 
 	int64_t T2 = 0, OFF2 = 0, SENS2 = 0;
 
@@ -73,8 +82,7 @@ static int32_t ms5611_pressure_pa(uint16_t *C, uint32_t D1, uint32_t D2, int32_t
 	OFF  -= OFF2;
 	SENS -= SENS2;
 
-	int32_t P = (((int64_t)D1 * SENS) >> 21) - OFF;
-	P >>= 15;
+	int64_t P = (((((int64_t)D1) * SENS) >> 21) - OFF) >> 15;
 
 	if(temp_centi)
 		*temp_centi = TEMP;
@@ -185,8 +193,8 @@ double get_ms5611(ms5611* mod_baro, int* new_data_arrived)
 			D[1] = (((uint32_t)(mod_baro->read_buffer_D[1][0])) << 16) | (((uint32_t)(mod_baro->read_buffer_D[1][1])) << 8) | ((uint32_t)(mod_baro->read_buffer_D[1][2]));
 			D[2] = (((uint32_t)(mod_baro->read_buffer_D[2][0])) << 16) | (((uint32_t)(mod_baro->read_buffer_D[2][1])) << 8) | ((uint32_t)(mod_baro->read_buffer_D[2][2]));
 
-			int32_t temperature;
-			int32_t pressure = ms5611_pressure_pa(mod_baro->C, D[1], D[2], &temperature);
+			int64_t temperature;
+			int64_t pressure = ms5611_pressure_pa(mod_baro->C, D[1], D[2], &temperature);
 
 			mod_baro->data = 44330.0 * (1.0 - pow(pressure / 101325.0, 0.190294957));
 
