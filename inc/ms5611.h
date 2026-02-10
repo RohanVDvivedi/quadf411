@@ -38,6 +38,8 @@ struct ms5611
 
 	uint32_t read_period_in_millis; // period in millis to be allowed to read the next record
 
+	uint8_t commands[3]; // 0x48 and 0x58
+
 	uint8_t read_buffer_D[3][3]; // buffers for read_buffer_D[1] and read_buffer_D[2]
 	// we will waste the 0th element
 

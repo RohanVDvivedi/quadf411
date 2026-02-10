@@ -12,6 +12,9 @@ int init_ms5611(ms5611* mod_baro, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, dpi
 	mod_baro->last_read_in_millis = HAL_GetTick();
 	mod_baro->read_period_in_millis = 10;
 
+	mod_baro->commands[1] = 0x48;
+	mod_baro->commands[2] = 0x58;
+
 	if(HAL_I2C_IsDeviceReady(hi2c, i2c_addr << 1, 3, 100) != HAL_OK)
 		return 0;
 
@@ -103,7 +106,7 @@ double get_ms5611(ms5611* mod_baro, int* new_data_arrived)
 			if(bytes_read > 0 && buffer[0] == mod_baro->i2c_addr)
 			{
 				// we are at the top of the queue, so schedule this read
-				HAL_I2C_Master_Transmit_IT(mod_baro->hi2c, (mod_baro->i2c_addr) << 1, ((uint8_t[]){0x08 + ((0x03 + mod_baro->state_data_type) << 4)}), 1);
+				HAL_I2C_Master_Transmit_IT(mod_baro->hi2c, (mod_baro->i2c_addr) << 1, mod_baro->commands + mod_baro->state_data_type, 1);
 				mod_baro->state = MS5611_COMMAND_IN_PROGRESS;
 			}
 
