@@ -45,11 +45,31 @@ double get_ms5611(ms5611* mod_baro, int* new_data_arrived)
 	{
 		case MS5611_NOT_STARTED :
 		{
+			// queue read request to dpipe
+			{
+				__disable_irq();
+					write_to_dpipe(mod_baro->i2c_queue, &(mod_baro->i2c_addr), 1, ALL_OR_NONE);
+				__enable_irq();
+				mod_baro->state = MS5611_COMMAND_QUEUED;
+				mod_baro->state_data_type = 1;
+			}
 
+			break;
 		}
 		case MS5611_COMMAND_QUEUED :
 		{
+			uint8_t buffer[1];
+			__disable_irq();
+				cy_uint bytes_read = peek_from_dpipe(mod_baro->i2c_queue, buffer, 1, ALL_OR_NONE);
+			__enable_irq();
+			if(bytes_read > 0 && buffer[0] == mod_baro->i2c_addr)
+			{
+				// we are at the top of the queue, so schedule this read
+				HAL_I2C_Master_Transmit_IT(mod_baro->hi2c, (mod_baro->i2c_addr) << 1, ((uint8_t[]){0x08 + ((0x03 + mod_baro->state_data_type) << 4)}), 1);
+				mod_baro->state = MS5611_COMMAND_IN_PROGRESS;
+			}
 
+			break;
 		}
 		case MS5611_COMMAND_IN_PROGRESS :
 		{
@@ -58,11 +78,36 @@ double get_ms5611(ms5611* mod_baro, int* new_data_arrived)
 		}
 		case MS5611_COMMAND_COMPLETED :
 		{
+			// record the millis when last read was done by the user
+			mod_baro->last_read_in_millis = HAL_GetTick();
 
+			mod_baro->state = MS5611_WAIT_FOR_PERIOD;
+			break;
+		}
+		case MS5611_WAIT_FOR_PERIOD :
+		{
+			// queue read request to dpipe, if the period to wait for has elapsed
+			if(HAL_GetTick() >= mod_baro->last_read_in_millis + mod_baro->read_period_in_millis)
+			{
+				__disable_irq();
+					write_to_dpipe(mod_baro->i2c_queue, &(mod_baro->i2c_addr), 1, ALL_OR_NONE);
+				__enable_irq();
+				mod_baro->state = MS5611_READ_QUEUED;
+			}
+			break;
 		}
 		case MS5611_READ_QUEUED :
 		{
-
+			uint8_t buffer[1];
+			__disable_irq();
+				cy_uint bytes_read = peek_from_dpipe(mod_baro->i2c_queue, buffer, 1, ALL_OR_NONE);
+			__enable_irq();
+			if(bytes_read > 0 && buffer[0] == mod_baro->i2c_addr)
+			{
+				HAL_I2C_Master_Receive_IT(mod_baro->hi2c, (mod_baro->i2c_addr) << 1, &(mod_baro->read_buffer_D[mod_baro->state_data_type][0]), 3);
+				mod_baro->state = MS5611_READ_IN_PROGRESS;
+			}
+			break;
 		}
 		case MS5611_READ_IN_PROGRESS :
 		{
@@ -71,7 +116,15 @@ double get_ms5611(ms5611* mod_baro, int* new_data_arrived)
 		}
 		case MS5611_READ_COMPLETED :
 		{
-
+			// queue read request to dpipe
+			{
+				__disable_irq();
+					write_to_dpipe(mod_baro->i2c_queue, &(mod_baro->i2c_addr), 1, ALL_OR_NONE);
+				__enable_irq();
+				mod_baro->state = MS5611_COMMAND_QUEUED;
+				mod_baro->state_data_type = (3 - mod_baro->state_data_type);
+			}
+			break;
 		}
 	}
 
