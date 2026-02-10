@@ -131,6 +131,12 @@ int main(void)
 		while(1);
 	}
 
+	if(!init_ms5611(&mod_baro, &hi2c1, 0x77, &i2c_sensor_queue)) // collect samples every 10 millis -> 100 Hz
+	{
+		HAL_UART_Transmit(&huart1, (uint8_t *)("could not init ms5611\n"), strlen("could not init ms5611\n"), HAL_MAX_DELAY);
+		while(1);
+	}
+
 	/*const char* i2c_devices[] = {
 		"adxl345",
 		"itg3205",
@@ -148,6 +154,7 @@ int main(void)
 	vector accl_data = {};
 	vector gyro_data = {};
 	vector magn_data = {};
+	double baro_data = 0;
 
 	uint32_t last_print_at = HAL_GetTick();
 	uint32_t print_period = 100; // print every 100 millis
@@ -155,6 +162,7 @@ int main(void)
 	int accl_samples = 0;
 	int gyro_samples = 0;
 	int magn_samples = 0;
+	int baro_samples = 0;
 
 	while(1)
 	{
@@ -184,10 +192,18 @@ int main(void)
 			vector_mul_scalar(&magn_data, &_magn_data, 0.92 / 1000.0); // convert to the range in Gauss
 		}
 
+		new_data_arrived = 0;
+		double _baro_data = get_ms5611(&mod_baro, &new_data_arrived);
+		if(new_data_arrived)
+		{
+			baro_samples++;
+			baro_data = _baro_data; // convert to the CM
+		}
+
 		if(HAL_GetTick() >= last_print_at + print_period)
 		{
 			char buffer[300];
-			sprintf(buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples);
+			sprintf(buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
 			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 			last_print_at = HAL_GetTick();
 			accl_samples = 0;
