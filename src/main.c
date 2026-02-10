@@ -9,10 +9,12 @@
 #include<adxl345.h>
 #include<itg3205.h>
 #include<hmc5883l.h>
+#include<ms5611.h>
 
 adxl345 mod_accl;
 itg3205 mod_gyro;
 hmc5883l mod_magn;
+ms5611 mod_baro;
 
 void SysTick_Handler(void)
 {
@@ -60,7 +62,25 @@ void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
 	if(hi2c->Instance == I2C1)
 	{
-		if(maybe_data_ready_adxl345(&mod_accl) || maybe_data_ready_itg3205(&mod_gyro) || maybe_data_ready_hmc5883l(&mod_magn))
+	}
+}
+
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	if(hi2c->Instance == I2C1)
+	{
+		if(maybe_data_ready_ms5611(&mod_baro))
+		{
+			asm("");
+		}
+	}
+}
+
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	if(hi2c->Instance == I2C1)
+	{
+		if(maybe_data_ready_ms5611(&mod_baro))
 		{
 			asm("");
 		}
