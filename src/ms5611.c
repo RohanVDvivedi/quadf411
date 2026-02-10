@@ -50,18 +50,11 @@ int maybe_data_ready_ms5611(ms5611* mod_baro)
 extern UART_HandleTypeDef huart1;
 static int64_t ms5611_pressure_pa(uint16_t* C, uint32_t D1, uint32_t D2, int64_t* temp_centi)
 {
-	char buffer[300];
-	sprintf(buffer, "-> %hu, %hu, %hu, %hu, %hu, %hu, %lu, %lu\n", C[1], C[2], C[3], C[4], C[5], C[6], D1, D2);
-	HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
-
 	int64_t dT = (int64_t)D2 - (((int64_t)C[5]) << 8);
 	int64_t TEMP = 2000 + (dT * ((int64_t)C[6])) / (1LL << 23);
 
 	int64_t OFF  = (((int64_t)C[2]) << 16) + (((int64_t)C[4]) * dT) / (1LL << 7);
 	int64_t SENS = (((int64_t)C[1]) << 15) + (((int64_t)C[3]) * dT) / (1LL << 8);
-
-	sprintf(buffer, "-> %lld, %lld, %lld, %lld\n", dT, TEMP, OFF, SENS);
-	HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 
 	int64_t T2 = 0, OFF2 = 0, SENS2 = 0;
 
