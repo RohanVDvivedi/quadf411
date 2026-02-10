@@ -187,7 +187,7 @@ double get_ms5611(ms5611* mod_baro, int* new_data_arrived)
 			int64_t temperature;
 			int64_t pressure = ms5611_pressure_pa(mod_baro->C, D[1], D[2], &temperature);
 
-			mod_baro->data = 44330.0 * (1.0 - pow(pressure / 101325.0, 0.190294957));
+			mod_baro->data = 44330.77 * (1.0 - pow(pressure / 101325.0, 0.1902632));
 
 			if(isnan(mod_baro->data))
 				break;
