@@ -43,6 +43,8 @@ struct ms5611
 	uint8_t read_buffer_D[3][3]; // buffers for read_buffer_D[1] and read_buffer_D[2]
 	// we will waste the 0th element
 
+	int data_read_allowed;
+
 	double data;
 };
 

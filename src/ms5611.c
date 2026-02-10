@@ -12,6 +12,8 @@ int init_ms5611(ms5611* mod_baro, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, dpi
 	mod_baro->last_read_in_millis = HAL_GetTick();
 	mod_baro->read_period_in_millis = 10;
 
+	mod_baro->data_read_allowed = 0;
+
 	mod_baro->commands[1] = 0x48;
 	mod_baro->commands[2] = 0x58;
 
@@ -164,6 +166,9 @@ double get_ms5611(ms5611* mod_baro, int* new_data_arrived)
 		}
 		case MS5611_READ_COMPLETED :
 		{
+			if(mod_baro->state_data_type == 2)
+				mod_baro->data_read_allowed = 1;
+
 			// queue read request to dpipe
 			{
 				__disable_irq();
@@ -173,6 +178,9 @@ double get_ms5611(ms5611* mod_baro, int* new_data_arrived)
 				mod_baro->state_data_type = (3 - mod_baro->state_data_type);
 			}
 
+			if(!(mod_baro->data_read_allowed))
+				break;
+
 			uint32_t D[3];
 			D[1] = (((uint32_t)(mod_baro->read_buffer_D[1][0])) << 16) | (((uint32_t)(mod_baro->read_buffer_D[1][1])) << 8) | ((uint32_t)(mod_baro->read_buffer_D[1][2]));
 			D[2] = (((uint32_t)(mod_baro->read_buffer_D[2][0])) << 16) | (((uint32_t)(mod_baro->read_buffer_D[2][1])) << 8) | ((uint32_t)(mod_baro->read_buffer_D[2][2]));
@@ -181,6 +189,9 @@ double get_ms5611(ms5611* mod_baro, int* new_data_arrived)
 			int32_t pressure = ms5611_pressure_pa(mod_baro->C, D[1], D[2], &temperature);
 
 			mod_baro->data = 44330.0 * (1.0 - pow(pressure / 101325.0, 0.190294957));
+
+			if(isnan(mod_baro->data))
+				break;
 
 			(*new_data_arrived) = 1;
 			return mod_baro->data;
