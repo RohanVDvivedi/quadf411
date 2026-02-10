@@ -1,4 +1,3 @@
-* setup state machine for capturing data from ms5611
 * setup for capturing data from ibus receiver (UART)
 * setup for capturing + parsing gps data and setup the board (UART)
 
