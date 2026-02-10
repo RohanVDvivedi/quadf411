@@ -51,7 +51,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
 	if(hi2c->Instance == I2C1)
 	{
-		if(maybe_data_ready_adxl345(&mod_accl) || maybe_data_ready_itg3205(&mod_gyro) || maybe_data_ready_hmc5883l(&mod_magn))
+		if(maybe_data_ready_adxl345(&mod_accl) || maybe_data_ready_itg3205(&mod_gyro) || maybe_data_ready_hmc5883l(&mod_magn) || maybe_data_ready_ms5611(&mod_baro))
 		{
 			asm("");
 		}
@@ -69,10 +69,6 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
 	if(hi2c->Instance == I2C1)
 	{
-		if(maybe_data_ready_ms5611(&mod_baro))
-		{
-			asm("");
-		}
 	}
 }
 
@@ -203,12 +199,13 @@ int main(void)
 		if(HAL_GetTick() >= last_print_at + print_period)
 		{
 			char buffer[300];
-			sprintf(buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, /*baro_samples*/mod_baro.state);
+			sprintf(buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
 			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 			last_print_at = HAL_GetTick();
 			accl_samples = 0;
 			gyro_samples = 0;
 			magn_samples = 0;
+			baro_samples = 0;
 		}
 	}
 

@@ -145,7 +145,14 @@ double get_ms5611(ms5611* mod_baro, int* new_data_arrived)
 			__enable_irq();
 			if(bytes_read > 0 && buffer[0] == mod_baro->i2c_addr)
 			{
-				HAL_I2C_Master_Receive_IT(mod_baro->hi2c, (mod_baro->i2c_addr) << 1, &(mod_baro->read_buffer_D[mod_baro->state_data_type][0]), 3);
+				HAL_I2C_Mem_Read_IT(
+					mod_baro->hi2c,
+					(mod_baro->i2c_addr) << 1,
+					0x00, // register address
+					I2C_MEMADD_SIZE_8BIT,
+					&(mod_baro->read_buffer_D[mod_baro->state_data_type][0]),
+					3
+				);
 				mod_baro->state = MS5611_READ_IN_PROGRESS;
 			}
 			break;
