@@ -194,6 +194,8 @@ int main(void)
 				vector_mul_scalar(&accl_data, &_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
 
 				// use accl_data
+				abs_pitch = 0.96 * abs_pitch + 0.04 * angle_between_2_vectors(&unit_vector_y_axis, &accl_data, &boot_time_accl_data);
+				abs_roll = 0.96 * abs_roll + 0.04 * angle_between_2_vectors(&unit_vector_x_axis, &accl_data, &boot_time_accl_data);
 			}
 
 			// get time for the accl_data
@@ -210,6 +212,17 @@ int main(void)
 				dt_gyro = (HAL_GetTick() - t_gyro);
 
 			vector_mul_scalar(&gyro_data, &_gyro_data, 1.0/14.375); // convert to degrees per second
+
+			abs_pitch += (gyro_data.yj * (dt_gyro / 1000.0));
+			if(abs_pitch > 180)
+				abs_pitch -= 360;
+			else if(abs_pitch < -180)
+				abs_pitch += 360;
+			abs_roll += (gyro_data.xi * (dt_gyro / 1000.0));
+			if(abs_roll > 180)
+				abs_roll -= 360;
+			else if(abs_roll < -180)
+				abs_roll += 360;
 
 			// get time for the gyro_data
 			t_gyro = HAL_GetTick();
