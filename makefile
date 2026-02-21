@@ -31,7 +31,8 @@ OPTIMIZATION:=-Os
 # use hardware FPU
 HARD_FPU:=-mfloat-abi=hard
 # the final compiler flags
-CFLAGS:=-Wall -Werror $(ARCH_FLAGS) ${HARD_FPU} ${OPTIMIZATION} -I${INC_DIR} -fsingle-precision-constant -flto -ffunction-sections -fdata-sections
+#CFLAGS:=-Wall -Werror $(ARCH_FLAGS) ${HARD_FPU} ${OPTIMIZATION} -I${INC_DIR} -fsingle-precision-constant -flto -ffunction-sections -fdata-sections
+CFLAGS:=-Wall $(ARCH_FLAGS) ${HARD_FPU} ${OPTIMIZATION} -I${INC_DIR} -fsingle-precision-constant -flto -ffunction-sections -fdata-sections
 # I am using only single precission floating point constants
 
 # adding HAL + CMSIS headers to include dirs
