@@ -6,6 +6,8 @@
 
 #include<cutlery/dpipe.h>
 
+#include<cutlery/dpipe.h>
+
 #include<adxl345.h>
 #include<itg3205.h>
 #include<hmc5883l.h>
@@ -147,10 +149,19 @@ int main(void)
 		0x77
 	};*/
 
+	int is_valid_boot_time_accl_data = 0;
+	vector boot_time_accl_data = {};
+	int is_valid_boot_time_magn_data = 0;
+	vector boot_time_magn_data = {};
+
 	vector accl_data = {};
 	vector gyro_data = {};
 	vector magn_data = {};
 	double baro_data = 0;
+
+	// absolute pitch and roll in degrees
+	double abs_pitch = 0;
+	double abs_roll = 0;
 
 	uint32_t last_print_at = HAL_GetTick();
 	uint32_t print_period = 1000; // print every 100 millis
@@ -169,7 +180,17 @@ int main(void)
 		if(new_data_arrived)
 		{
 			accl_samples++;
-			vector_mul_scalar(&accl_data, &_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
+			if(!is_valid_boot_time_accl_data)
+			{
+				is_valid_boot_time_accl_data = 1;
+				vector_mul_scalar(&boot_time_accl_data, &_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
+			}
+			else
+			{
+				vector_mul_scalar(&accl_data, &_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
+
+				// use accl_data
+			}
 		}
 
 		new_data_arrived = 0;
@@ -185,7 +206,17 @@ int main(void)
 		if(new_data_arrived)
 		{
 			magn_samples++;
-			vector_mul_scalar(&magn_data, &_magn_data, 0.92 / 1000.0); // convert to the range in Gauss
+			if(!is_valid_boot_time_magn_data)
+			{
+				is_valid_boot_time_magn_data = 1;
+				vector_mul_scalar(&boot_time_magn_data, &_magn_data, 0.92 / 1000.0); // convert to the range in Gauss
+			}
+			else
+			{
+				vector_mul_scalar(&magn_data, &_magn_data, 0.92 / 1000.0); // convert to the range in Gauss
+
+				// use magn_data
+			}
 		}
 
 		new_data_arrived = 0;
