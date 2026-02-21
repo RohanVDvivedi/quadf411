@@ -3,6 +3,7 @@
 
 #include<stdio.h>
 #include<string.h>
+#include<math.h>
 
 #include<cutlery/dpipe.h>
 
@@ -151,6 +152,9 @@ int main(void)
 
 	int is_valid_boot_time_accl_data = 0;
 	vector boot_time_accl_data = {};
+	vector average_gyro_data = {};
+	#define GYRO_AVERAGE_SAMPLES 200
+	uint32_t gyro_init_samples = 0;
 	int is_valid_boot_time_magn_data = 0;
 	vector boot_time_magn_data = {};
 
@@ -194,8 +198,12 @@ int main(void)
 				vector_mul_scalar(&accl_data, &_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
 
 				// use accl_data
-				abs_pitch = 0.96 * abs_pitch + 0.04 * angle_between_2_vectors(&unit_vector_y_axis, &accl_data, &boot_time_accl_data);
-				abs_roll = 0.96 * abs_roll + 0.04 * angle_between_2_vectors(&unit_vector_x_axis, &accl_data, &boot_time_accl_data);
+				float _abs_pitch = (atanf(-accl_data.xi / accl_data.zk) * 180 / M_PI);
+				if(!isnan(_abs_pitch))
+					abs_pitch = 0.98 * abs_pitch + 0.02 * _abs_pitch;
+				float _abs_roll = (atanf(accl_data.yj / accl_data.zk) * 180 / M_PI);
+				if(!isnan(_abs_roll))
+					abs_roll = 0.98 * abs_roll + 0.02 * _abs_roll;
 			}
 
 			// get time for the accl_data
@@ -211,18 +219,35 @@ int main(void)
 			if(t_gyro != 0)
 				dt_gyro = (HAL_GetTick() - t_gyro);
 
-			vector_mul_scalar(&gyro_data, &_gyro_data, 1.0/14.375); // convert to degrees per second
+			if(gyro_init_samples < GYRO_AVERAGE_SAMPLES)
+			{
+				vector sum_gyro_data;
+				vector_sum(&sum_gyro_data, &average_gyro_data, &_gyro_data);
+				gyro_init_samples++;
+				if(gyro_init_samples >= GYRO_AVERAGE_SAMPLES)
+				{
+					vector_mul_scalar(&average_gyro_data, &sum_gyro_data, 1.0 / gyro_init_samples);
+				}
+				else
+					average_gyro_data = sum_gyro_data;
+			}
+			else
+			{
+				vector gyro_diff;
+				vector_sub(&gyro_diff, &_gyro_data, &average_gyro_data);
+				vector_mul_scalar(&gyro_data, &gyro_diff, 1.0/14.375); // convert to degrees per second
 
-			abs_pitch += (gyro_data.yj * (dt_gyro / 1000.0));
-			if(abs_pitch > 180)
-				abs_pitch -= 360;
-			else if(abs_pitch < -180)
-				abs_pitch += 360;
-			abs_roll += (gyro_data.xi * (dt_gyro / 1000.0));
-			if(abs_roll > 180)
-				abs_roll -= 360;
-			else if(abs_roll < -180)
-				abs_roll += 360;
+				abs_pitch += (gyro_data.yj * (dt_gyro / 1000.0));
+				if(abs_pitch > 180)
+					abs_pitch -= 360;
+				else if(abs_pitch < -180)
+					abs_pitch += 360;
+				abs_roll += (gyro_data.xi * (dt_gyro / 1000.0));
+				if(abs_roll > 180)
+					abs_roll -= 360;
+				else if(abs_roll < -180)
+					abs_roll += 360;
+			}
 
 			// get time for the gyro_data
 			t_gyro = HAL_GetTick();
@@ -271,9 +296,9 @@ int main(void)
 		if(HAL_GetTick() >= last_print_at + print_period)
 		{
 			char buffer[300];
-			sprintf(buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
-			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
-			sprintf(buffer, "abs_pitch=%f, abs_roll=%f\n", abs_pitch, abs_roll);
+			/*sprintf(buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
+			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);*/
+			sprintf(buffer, "abs_pitch=%f \t abs_roll=%f\n", abs_pitch, abs_roll);
 			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 			last_print_at = HAL_GetTick();
 			accl_samples = 0;
