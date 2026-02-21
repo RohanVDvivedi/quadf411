@@ -153,7 +153,7 @@ int main(void)
 	double baro_data = 0;
 
 	uint32_t last_print_at = HAL_GetTick();
-	uint32_t print_period = 100; // print every 100 millis
+	uint32_t print_period = 1000; // print every 100 millis
 
 	int accl_samples = 0;
 	int gyro_samples = 0;
