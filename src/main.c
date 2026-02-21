@@ -154,10 +154,10 @@ int main(void)
 	int is_valid_boot_time_magn_data = 0;
 	vector boot_time_magn_data = {};
 
-	vector accl_data = {};
-	vector gyro_data = {};
-	vector magn_data = {};
-	double baro_data = 0;
+	vector accl_data = {}; uint32_t dt_accl = 0; uint32_t t_accl = 0;
+	vector gyro_data = {}; uint32_t dt_gyro = 0; uint32_t t_gyro = 0;
+	vector magn_data = {}; uint32_t dt_magn = 0; uint32_t t_magn = 0;
+	double baro_data = 0;  uint32_t dt_baro = 0; uint32_t t_baro = 0;
 
 	// absolute pitch and roll in degrees
 	double abs_pitch = 0;
@@ -180,6 +180,10 @@ int main(void)
 		if(new_data_arrived)
 		{
 			accl_samples++;
+
+			if(t_accl != 0)
+				dt_accl = (HAL_GetTick() - t_accl);
+
 			if(!is_valid_boot_time_accl_data)
 			{
 				is_valid_boot_time_accl_data = 1;
@@ -191,6 +195,9 @@ int main(void)
 
 				// use accl_data
 			}
+
+			// get time for the accl_data
+			t_accl = HAL_GetTick();
 		}
 
 		new_data_arrived = 0;
@@ -198,7 +205,14 @@ int main(void)
 		if(new_data_arrived)
 		{
 			gyro_samples++;
+
+			if(t_gyro != 0)
+				dt_gyro = (HAL_GetTick() - t_gyro);
+
 			vector_mul_scalar(&gyro_data, &_gyro_data, 1.0/14.375); // convert to degrees per second
+
+			// get time for the gyro_data
+			t_gyro = HAL_GetTick();
 		}
 
 		new_data_arrived = 0;
@@ -206,6 +220,10 @@ int main(void)
 		if(new_data_arrived)
 		{
 			magn_samples++;
+
+			if(t_magn != 0)
+				dt_magn = (HAL_GetTick() - t_magn);
+
 			if(!is_valid_boot_time_magn_data)
 			{
 				is_valid_boot_time_magn_data = 1;
@@ -217,6 +235,9 @@ int main(void)
 
 				// use magn_data
 			}
+
+			// get time for the magn_data
+			t_magn = HAL_GetTick();
 		}
 
 		new_data_arrived = 0;
@@ -224,7 +245,14 @@ int main(void)
 		if(new_data_arrived)
 		{
 			baro_samples++;
+
+			if(t_baro != 0)
+				dt_baro = (HAL_GetTick() - t_baro);
+
 			baro_data = _baro_data; // convert to the CM
+
+			// get time for the baro_data
+			t_baro = HAL_GetTick();
 		}
 
 		if(HAL_GetTick() >= last_print_at + print_period)
