@@ -191,11 +191,11 @@ int main(void)
 			if(!is_valid_boot_time_accl_data)
 			{
 				is_valid_boot_time_accl_data = 1;
-				vector_mul_scalar(&boot_time_accl_data, &_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
+				boot_time_accl_data = vector_mul_scalar(_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
 			}
 			else
 			{
-				vector_mul_scalar(&accl_data, &_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
+				accl_data = vector_mul_scalar(_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
 
 				// use accl_data
 				float _abs_pitch = (atanf(-accl_data.xi / accl_data.zk) * 180 / M_PI);
@@ -221,21 +221,14 @@ int main(void)
 
 			if(gyro_init_samples < GYRO_AVERAGE_SAMPLES)
 			{
-				vector sum_gyro_data;
-				vector_sum(&sum_gyro_data, &average_gyro_data, &_gyro_data);
+				average_gyro_data = vector_sum(average_gyro_data, _gyro_data);
 				gyro_init_samples++;
 				if(gyro_init_samples >= GYRO_AVERAGE_SAMPLES)
-				{
-					vector_mul_scalar(&average_gyro_data, &sum_gyro_data, 1.0 / gyro_init_samples);
-				}
-				else
-					average_gyro_data = sum_gyro_data;
+					average_gyro_data = vector_mul_scalar(average_gyro_data, 1.0 / gyro_init_samples);
 			}
 			else
 			{
-				vector gyro_diff;
-				vector_sub(&gyro_diff, &_gyro_data, &average_gyro_data);
-				vector_mul_scalar(&gyro_data, &gyro_diff, 1.0/14.375); // convert to degrees per second
+				gyro_data = vector_mul_scalar(vector_sub(_gyro_data, average_gyro_data), 1.0/14.375); // convert to degrees per second
 
 				abs_pitch += (gyro_data.yj * (dt_gyro / 1000.0));
 				if(abs_pitch > 180)
@@ -265,11 +258,11 @@ int main(void)
 			if(!is_valid_boot_time_magn_data)
 			{
 				is_valid_boot_time_magn_data = 1;
-				vector_mul_scalar(&boot_time_magn_data, &_magn_data, 0.92 / 1000.0); // convert to the range in Gauss
+				boot_time_magn_data = vector_mul_scalar(_magn_data, 0.92 / 1000.0); // convert to the range in Gauss
 			}
 			else
 			{
-				vector_mul_scalar(&magn_data, &_magn_data, 0.92 / 1000.0); // convert to the range in Gauss
+				magn_data = vector_mul_scalar(_magn_data, 0.92 / 1000.0); // convert to the range in Gauss
 
 				// use magn_data
 			}
