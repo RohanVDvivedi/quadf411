@@ -190,7 +190,7 @@ int main(void)
 
 			if(!is_valid_boot_time_accl_data)
 			{
-				is_valid_boot_time_accl_data = 1;
+				is_valid_boot_time_accl_data = (HAL_GetTick() > 100); // wait for 100 millis
 				boot_time_accl_data = vector_mul_scalar(_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
 			}
 			else
@@ -198,12 +198,20 @@ int main(void)
 				accl_data = vector_mul_scalar(_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
 
 				// use accl_data
-				float _abs_pitch = (atanf(-accl_data.xi / accl_data.zk) * 180 / M_PI);
-				if(!isnan(_abs_pitch))
-					abs_pitch = 0.98 * abs_pitch + 0.02 * _abs_pitch;
-				float _abs_roll = (atanf(accl_data.yj / accl_data.zk) * 180 / M_PI);
-				if(!isnan(_abs_roll))
-					abs_roll = 0.98 * abs_roll + 0.02 * _abs_roll;
+				{
+					vector boot_time_ay = vector_unit_dir(NULL, vector_perpendicular_component(NULL, boot_time_accl_data, unit_vector_y_axis));
+					vector curr_ay = vector_unit_dir(NULL, vector_perpendicular_component(NULL, accl_data, unit_vector_y_axis));
+					float _abs_pitch = angle_between_2_vectors(unit_vector_y_axis, curr_ay, boot_time_ay);
+					if(!isnan(_abs_pitch))
+						abs_pitch = 0.98 * abs_pitch + 0.02 * (_abs_pitch * 180.0 / M_PI);
+				}
+				{
+					vector boot_time_ax = vector_unit_dir(NULL, vector_perpendicular_component(NULL, boot_time_accl_data, unit_vector_x_axis));
+					vector curr_ax = vector_unit_dir(NULL, vector_perpendicular_component(NULL, accl_data, unit_vector_x_axis));
+					float _abs_roll = angle_between_2_vectors(unit_vector_x_axis, curr_ax, boot_time_ax);
+					if(!isnan(_abs_roll))
+						abs_roll = 0.98 * abs_roll + 0.02 * (_abs_roll * 180.0 / M_PI);
+				}
 			}
 
 			// get time for the accl_data
