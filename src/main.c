@@ -98,6 +98,9 @@ int main(void)
 	// setup clock to run at highest frequency
 	SystemClock_Config();
 
+	// 100 ms delay to let the power lines get stable
+	HAL_Delay(100);
+
 	// setup LED pin as output
 	GPIO_Init();
 
@@ -144,7 +147,7 @@ int main(void)
 	int is_valid_boot_time_accl_data = 0;
 	vector boot_time_accl_data = {};
 	vector average_gyro_data = {};
-	#define GYRO_AVERAGE_SAMPLES 200
+	#define GYRO_AVERAGE_SAMPLES 500
 	uint32_t gyro_init_samples = 0;
 	int is_valid_boot_time_magn_data = 0;
 	vector boot_time_magn_data = {};
@@ -181,7 +184,7 @@ int main(void)
 
 			if(!is_valid_boot_time_accl_data)
 			{
-				is_valid_boot_time_accl_data = (HAL_GetTick() > 100); // wait for 100 millis
+				is_valid_boot_time_accl_data = (HAL_GetTick() > 300); // wait for 300 millis
 				boot_time_accl_data = vector_mul_scalar(_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
 			}
 			else
