@@ -141,20 +141,6 @@ int main(void)
 	if(failed)
 		while(1);
 
-	/*const char* i2c_devices[] = {
-		"adxl345",
-		"itg3205",
-		"hmc5883l",
-		"ms5611"
-	};
-
-	const uint8_t i2c_addresses[] = {
-		0x53,
-		0x68,
-		0x1e,
-		0x77
-	};*/
-
 	int is_valid_boot_time_accl_data = 0;
 	vector boot_time_accl_data = {};
 	vector average_gyro_data = {};
