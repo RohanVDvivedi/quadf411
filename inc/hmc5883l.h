@@ -44,7 +44,6 @@ int init_hmc5883l(hmc5883l* mod_magn, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr,
 // call on i2c txcplt
 int maybe_data_ready_hmc5883l(hmc5883l* mod_magn);
 
-// returns only if new data is available, else returns NULL
 // pushes a new read to dpipe's queue if period has elapsed
 // if the top of the dpipe's queue is it's own request, it schedules its IO over state machine 
 vector get_hmc5883l(hmc5883l* mod_magn, int* new_data_arrived);

@@ -13,11 +13,13 @@
 #include<itg3205.h>
 #include<hmc5883l.h>
 #include<ms5611.h>
+#include<fs_i6_ibus_receiver.h>
 
 adxl345 mod_accl;
 itg3205 mod_gyro;
 hmc5883l mod_magn;
 ms5611 mod_baro;
+fs_i6_ibus mod_fs_i6_ibus;
 
 void SysTick_Handler(void)
 {
@@ -31,11 +33,24 @@ void USART1_IRQHandler(void)
 	HAL_UART_IRQHandler(&huart1);
 }
 
+UART_HandleTypeDef huart2;
+
+void USART2_IRQHandler(void)
+{
+	HAL_UART_IRQHandler(&huart2);
+}
+
 volatile uint8_t uart_tx_ready = 1;
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if(huart->Instance == USART1)
 		uart_tx_ready = 1;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if(huart == mod_fs_i6_ibus.huart)
+		accept_byte_for_fs_i6_ibus(&mod_fs_i6_ibus);
 }
 
 I2C_HandleTypeDef hi2c1;
@@ -89,6 +104,7 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
 static void SystemClock_Config(void);
 static void GPIO_Init(void);
 static void UART1_Init(UART_HandleTypeDef* huart1);
+static void UART2_Init(UART_HandleTypeDef* huart2);
 static void I2C1_Init(I2C_HandleTypeDef* hi2c1);
 
 int main(void)
@@ -106,6 +122,7 @@ int main(void)
 
 	// setup UART at baud of 115200
 	UART1_Init(&huart1);
+	UART2_Init(&huart2);
 
 	// setup I2C at baud of 100000
 	I2C1_Init(&hi2c1);
@@ -141,6 +158,8 @@ int main(void)
 		failed = 1;
 	}
 
+	init_fs_i6_ibus_receiver(&mod_fs_i6_ibus, &huart2);
+
 	if(failed)
 		while(1);
 
@@ -160,6 +179,8 @@ int main(void)
 	// absolute pitch and roll in degrees
 	double abs_pitch = 0;
 	double abs_roll = 0;
+
+	fs_i6_data receiver_channels_data = {};
 
 	uint32_t last_print_at = HAL_GetTick();
 	uint32_t print_period = 1000; // print every 100 millis
@@ -288,13 +309,25 @@ int main(void)
 			t_baro = HAL_GetTick();
 		}
 
+		receiver_channels_data = fetch_latest_fs_i6_ibus(&mod_fs_i6_ibus);
+
 		if(HAL_GetTick() >= last_print_at + print_period)
 		{
 			char buffer[300];
 			/*sprintf(buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
 			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);*/
-			sprintf(buffer, "abs_pitch=%f \t abs_roll=%f\n", abs_pitch, abs_roll);
-			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
+			/*sprintf(buffer, "abs_pitch=%f \t abs_roll=%f\n", abs_pitch, abs_roll);
+			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);*/
+			if(receiver_channels_data.has_valid_data)
+			{
+				sprintf(buffer, "receiver_data[0]=%hu \t receiver_data[1]=%hu \t receiver_data[2]=%hu \t receiver_data[3]=%hu\n", receiver_channels_data.channels[0], receiver_channels_data.channels[1], receiver_channels_data.channels[2], receiver_channels_data.channels[3]);
+				HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
+			}
+			else
+			{
+				sprintf(buffer, "receiver_invalid\n");
+				HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
+			}
 			last_print_at = HAL_GetTick();
 			accl_samples = 0;
 			gyro_samples = 0;
@@ -434,6 +467,34 @@ static void UART1_Init(UART_HandleTypeDef* huart1)
 
 	HAL_NVIC_SetPriority(USART1_IRQn, 5, 0);
 	HAL_NVIC_EnableIRQ(USART1_IRQn);
+}
+
+static void UART2_Init(UART_HandleTypeDef* huart2)
+{
+	__HAL_RCC_USART2_CLK_ENABLE();
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+
+	GPIO_InitTypeDef gpio = {0};
+	gpio.Pin       = GPIO_PIN_2 | GPIO_PIN_3;
+	gpio.Mode      = GPIO_MODE_AF_PP;
+	gpio.Pull      = GPIO_NOPULL;
+	gpio.Speed     = GPIO_SPEED_FREQ_VERY_HIGH;
+	gpio.Alternate = GPIO_AF7_USART2;
+	HAL_GPIO_Init(GPIOA, &gpio);
+
+	huart2->Instance          = USART2;
+	huart2->Init.BaudRate     = 115200;
+	huart2->Init.WordLength   = UART_WORDLENGTH_8B;
+	huart2->Init.StopBits     = UART_STOPBITS_1;
+	huart2->Init.Parity       = UART_PARITY_NONE;
+	huart2->Init.Mode         = UART_MODE_TX_RX;
+	huart2->Init.HwFlowCtl    = UART_HWCONTROL_NONE;
+	huart2->Init.OverSampling = UART_OVERSAMPLING_16;
+
+	HAL_UART_Init(huart2);
+
+	HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);
+	HAL_NVIC_EnableIRQ(USART2_IRQn);
 }
 
 /* ---------------- I2C ---------------- */

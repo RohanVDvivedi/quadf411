@@ -55,7 +55,6 @@ int init_ms5611(ms5611* mod_baro, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, dpi
 // call on i2c txcplt
 int maybe_data_ready_ms5611(ms5611* mod_baro);
 
-// returns only if new data is available, else returns NULL
 // pushes a new read to dpipe's queue if period has elapsed
 // if the top of the dpipe's queue is it's own request, it schedules its IO over state machine 
 double get_ms5611(ms5611* mod_baro, int* new_data_arrived);

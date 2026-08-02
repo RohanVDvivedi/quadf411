@@ -44,7 +44,6 @@ int init_itg3205(itg3205* mod_gyro, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, d
 // call on i2c txcplt
 int maybe_data_ready_itg3205(itg3205* mod_gyro);
 
-// returns only if new data is available, else returns NULL
 // pushes a new read to dpipe's queue if period has elapsed
 // if the top of the dpipe's queue is it's own request, it schedules its IO over state machine 
 vector get_itg3205(itg3205* mod_gyro, int* new_data_arrived);
