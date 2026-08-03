@@ -2,7 +2,9 @@
 
 void init_fs_i6_ibus_receiver(fs_i6_ibus* mod_fsi6, UART_HandleTypeDef* huart)
 {
-	mod_fsi6->channels_data = (fs_i6_data){.has_valid_data = 0};
+	mod_fsi6->channels_data = (fs_i6_data){};
+
+	mod_fsi6->last_read_in_millis = HAL_GetTick();
 
 	initialize_dpipe_with_memory(&(mod_fsi6->unparsed_bytes), BUFFER_BYTES, mod_fsi6->unparsed_bytes_buffer);
 
@@ -21,8 +23,10 @@ void accept_byte_for_fs_i6_ibus(fs_i6_ibus* mod_fsi6)
 	HAL_UART_Receive_IT(mod_fsi6->huart, &(mod_fsi6->received_byte), 1);
 }
 
-fs_i6_data fetch_latest_fs_i6_ibus(fs_i6_ibus* mod_fsi6)
+fs_i6_data get_fs_i6_ibus(fs_i6_ibus* mod_fsi6, int* new_data_arrived)
 {
+	(*new_data_arrived) = 0;
+
 	// disable interrupts for stable reading from dpipe's buffer
 	__disable_irq();
 
@@ -55,11 +59,15 @@ fs_i6_data fetch_latest_fs_i6_ibus(fs_i6_ibus* mod_fsi6)
 		// enable interrupts back
 		__enable_irq();
 
+		// some data is received so write it
+		(*new_data_arrived) = 1;
+
+		// store timestamp of the most recent read/parse
+		mod_fsi6->last_read_in_millis = HAL_GetTick();
+
 		// populate the payload
-		mod_fsi6->channels_data.has_valid_data = 1;
 		for(uint32_t i = 0; i < CHANNELS_COUNT; i++)
 			mod_fsi6->channels_data.channels[i] = (((uint16_t)payload[2*i+2]) | (((uint16_t)payload[2*i+3])<<8));
-		mod_fsi6->channels_data.timestamp_in_millis = HAL_GetTick();
 
 		// disable interrupts for stable reading from dpipe's buffer
 		__disable_irq();

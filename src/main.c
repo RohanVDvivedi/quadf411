@@ -180,6 +180,7 @@ int main(void)
 	double abs_pitch = 0;
 	double abs_roll = 0;
 
+	int receiver_channels_data_valid = 0;
 	fs_i6_data receiver_channels_data = {};
 
 	uint32_t last_print_at = HAL_GetTick();
@@ -309,7 +310,13 @@ int main(void)
 			t_baro = HAL_GetTick();
 		}
 
-		receiver_channels_data = fetch_latest_fs_i6_ibus(&mod_fs_i6_ibus);
+		new_data_arrived = 0;
+		fs_i6_data _receiver_channels_data = get_fs_i6_ibus(&mod_fs_i6_ibus, &new_data_arrived);
+		if(new_data_arrived)
+		{
+			receiver_channels_data = _receiver_channels_data;
+			receiver_channels_data_valid = 1;
+		}
 
 		if(HAL_GetTick() >= last_print_at + print_period)
 		{
@@ -318,14 +325,9 @@ int main(void)
 			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);*/
 			/*sprintf(buffer, "abs_pitch=%f \t abs_roll=%f\n", abs_pitch, abs_roll);
 			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);*/
-			if(receiver_channels_data.has_valid_data)
+			if(receiver_channels_data_valid)
 			{
 				sprintf(buffer, "receiver_data[0]=%hu \t receiver_data[1]=%hu \t receiver_data[2]=%hu \t receiver_data[3]=%hu\n", receiver_channels_data.channels[0], receiver_channels_data.channels[1], receiver_channels_data.channels[2], receiver_channels_data.channels[3]);
-				HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
-			}
-			else
-			{
-				sprintf(buffer, "receiver_invalid\n");
 				HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 			}
 			last_print_at = HAL_GetTick();

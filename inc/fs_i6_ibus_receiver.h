@@ -13,10 +13,6 @@
 typedef struct fs_i6_data fs_i6_data;
 struct fs_i6_data
 {
-	unsigned int has_valid_data:1;
-
-	uint32_t timestamp_in_millis;
-
 	uint16_t channels[CHANNELS_COUNT];
 };
 
@@ -31,6 +27,8 @@ struct fs_i6_ibus
 
 	fs_i6_data channels_data;
 
+	uint32_t last_read_in_millis;
+
 	dpipe unparsed_bytes;
 
 	uint8_t unparsed_bytes_buffer[BUFFER_BYTES];
@@ -43,7 +41,7 @@ void init_fs_i6_ibus_receiver(fs_i6_ibus* mod_fsi6, UART_HandleTypeDef* huart);
 // to be called asynchnously in interrupt
 void accept_byte_for_fs_i6_ibus(fs_i6_ibus* mod_fsi6);
 
-// disables interrupt to get the valid snapshot
-fs_i6_data fetch_latest_fs_i6_ibus(fs_i6_ibus* mod_fsi6);
+// if there is new data available it is all parsed and latest one is returned
+fs_i6_data get_fs_i6_ibus(fs_i6_ibus* mod_fsi6, int* new_data_arrived);
 
 #endif
