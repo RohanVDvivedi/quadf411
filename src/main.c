@@ -337,46 +337,6 @@ int main(void)
 			baro_samples = 0;
 		}
 	}
-
-	/*for(int i = 0; i < sizeof(i2c_addresses)/sizeof(i2c_addresses[0]); i++)
-	{
-		char buffer[100];
-		if(HAL_I2C_IsDeviceReady(&hi2c1, i2c_addresses[i] << 1, 3, 10) == HAL_OK)
-			sprintf(buffer, "%s @ %hhx : detected\n", i2c_devices[i], i2c_addresses[i]);
-		else
-			sprintf(buffer, "%s @ %hhx : absent\n", i2c_devices[i], i2c_addresses[i]);
-		HAL_UART_Transmit(&huart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
-	}
-
-	while(1);*/
-
-	/*while(uart_tx_ready == 0);
-	uart_tx_ready = 0;
-	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"S", 1);
-
-	while(uart_tx_ready == 0);
-	uart_tx_ready = 0;
-	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"T", 1);
-
-	while(uart_tx_ready == 0);
-	uart_tx_ready = 0;
-	HAL_UART_Transmit_IT(&huart1, (uint8_t *)"S\n", 2);
-
-	uint32_t delay_ms = 2000;
-	while(1)
-	{
-		// toggle LED
-		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-
-		// print hello world on UART
-		if(uart_tx_ready)
-		{
-			uart_tx_ready = 0;  // mark busy
-			HAL_UART_Transmit_IT(&huart1, (uint8_t *)"Hello world!!\n", 14);
-		}
-
-		HAL_Delay(delay_ms);
-	}*/
 }
 
 /* ---------------- clock ---------------- */
