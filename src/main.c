@@ -101,11 +101,33 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
 	}
 }
 
+TIM_HandleTypeDef htim3; // for motors 1, 2, 3, 4
+TIM_HandleTypeDef htim4; // for motors 5, 6
+
 static void SystemClock_Config(void);
 static void GPIO_Init(void);
 static void UART1_Init(UART_HandleTypeDef* huart1);
 static void UART2_Init(UART_HandleTypeDef* huart2);
 static void I2C1_Init(I2C_HandleTypeDef* hi2c1);
+
+static void MX_TIM3_Init(void);
+static void MX_TIM4_Init(void);
+
+char debug_buffer[512];
+
+int write_board_motor_pwn(int motor_no, uint16_t pulse_width_in_us) // for escs write 1000 to 2000 values only here
+{
+	switch(motor_no)
+	{
+		case 1 : __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pulse_width_in_us); break;
+		case 2 : __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pulse_width_in_us); break;
+		case 3 : __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, pulse_width_in_us); break;
+		case 4 : __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, pulse_width_in_us); break;
+		case 5 : __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pulse_width_in_us); break;
+		case 6 : __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, pulse_width_in_us); break;
+		default : return 0;
+	}
+}
 
 int main(void)
 {
@@ -126,6 +148,10 @@ int main(void)
 
 	// setup I2C at baud of 100000
 	I2C1_Init(&hi2c1);
+
+	// setup timers for motors
+	MX_TIM3_Init();
+	MX_TIM4_Init();
 
 	#define I2C_SENSOR_QUEUE_CAPACITY 128
 	uint8_t i2c_sensor_queue_buffer[I2C_SENSOR_QUEUE_CAPACITY];
@@ -190,6 +216,14 @@ int main(void)
 	int gyro_samples = 0;
 	int magn_samples = 0;
 	int baro_samples = 0;
+
+	// right before the controller is ready then start att motors
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
 
 	while(1)
 	{
@@ -316,20 +350,24 @@ int main(void)
 		{
 			receiver_channels_data = _receiver_channels_data;
 			receiver_channels_data_valid = 1;
+
+
+			// write directly to motor 5 and 6
+			write_board_motor_pwn(5, receiver_channels_data.channels[0]);
+			write_board_motor_pwn(6, receiver_channels_data.channels[1]);
 		}
 
 		if(HAL_GetTick() >= last_print_at + print_period)
 		{
-			char buffer[300];
-			/*sprintf(buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
-			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);*/
-			/*sprintf(buffer, "abs_pitch=%f \t abs_roll=%f\n", abs_pitch, abs_roll);
-			HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);*/
-			if(receiver_channels_data_valid)
+			sprintf(debug_buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
+			HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));
+			/*sprintf(debug_buffer, "abs_pitch=%f \t abs_roll=%f\n", abs_pitch, abs_roll);
+			HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));*/
+			/*if(receiver_channels_data_valid)
 			{
-				sprintf(buffer, "receiver_data[0]=%hu \t receiver_data[1]=%hu \t receiver_data[2]=%hu \t receiver_data[3]=%hu\n", receiver_channels_data.channels[0], receiver_channels_data.channels[1], receiver_channels_data.channels[2], receiver_channels_data.channels[3]);
-				HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
-			}
+				sprintf(debug_buffer, "receiver_data[0]=%hu \t receiver_data[1]=%hu \t receiver_data[2]=%hu \t receiver_data[3]=%hu\n", receiver_channels_data.channels[0], receiver_channels_data.channels[1], receiver_channels_data.channels[2], receiver_channels_data.channels[3]);
+				HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));
+			}*/
 			last_print_at = HAL_GetTick();
 			accl_samples = 0;
 			gyro_samples = 0;
@@ -362,7 +400,7 @@ static void SystemClock_Config(void)
 	osc.PLL.PLLP       = RCC_PLLP_DIV4;   // 100 MHz
 	osc.PLL.PLLQ       = 8;
 
-	if (HAL_RCC_OscConfig(&osc) != HAL_OK)
+	if(HAL_RCC_OscConfig(&osc) != HAL_OK)
 	{
 		__disable_irq();
 		while (1);
@@ -379,7 +417,7 @@ static void SystemClock_Config(void)
 	clk.APB1CLKDivider = RCC_HCLK_DIV2;   // max 50 MHz
 	clk.APB2CLKDivider = RCC_HCLK_DIV1;   // max 100 MHz
 
-	if (HAL_RCC_ClockConfig(&clk, FLASH_ACR_LATENCY_3WS) != HAL_OK)
+	if(HAL_RCC_ClockConfig(&clk, FLASH_ACR_LATENCY_3WS) != HAL_OK)
 	{
 		__disable_irq();
 		while (1);
@@ -491,4 +529,128 @@ static void I2C1_Init(I2C_HandleTypeDef* hi2c1)
 
 	HAL_NVIC_SetPriority(I2C1_ER_IRQn, 5, 0);
 	HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
+}
+
+/* ---------------- TIMers for motors ---------------- */
+
+#define TIM_PRESCALER   (100u - 1) 			// 1 MHz clock in to the timers
+#define TIM_PERIOD      (20000u - 1u) 		// 20,000 total pulses in one period
+
+#define MOTOR_PWM_MIN    1000 // initial pwm valkue
+
+static void MX_TIM3_Init(void)
+{
+	/* ---- 1. Enable clocks first ---- */
+	__HAL_RCC_TIM3_CLK_ENABLE();
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+
+	/* ---- 2. Configure GPIO ---- */
+	/*
+	 * PB0  → TIM3_CH3  AF2
+	 * PB1  → TIM3_CH4  AF2
+	 * PB4  → TIM3_CH1  AF2
+	 * PB5  → TIM3_CH2  AF2
+	 */
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	GPIO_InitStruct.Pin       = GPIO_PIN_0 | GPIO_PIN_1 |
+	                            GPIO_PIN_4 | GPIO_PIN_5;
+	GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+	GPIO_InitStruct.Pull      = GPIO_NOPULL;
+	GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_LOW;
+	GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+	/* ---- 3. Configure timer ---- */
+	htim3.Instance               = TIM3;
+	htim3.Init.Prescaler         = TIM_PRESCALER;
+	htim3.Init.CounterMode       = TIM_COUNTERMODE_UP;
+	htim3.Init.Period            = TIM_PERIOD;
+	htim3.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+	htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+
+	if(HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+	{
+		__disable_irq();
+		while (1);
+	}
+
+	/* ---- 4. Configure channels ---- */
+	TIM_OC_InitTypeDef sConfigOC = {0};
+	sConfigOC.OCMode     = TIM_OCMODE_PWM1;
+	sConfigOC.Pulse      = MOTOR_PWM_MIN;
+	sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+	sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+
+	if(HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK) // motor 1
+	{
+		__disable_irq();
+		while (1);
+	}
+	if(HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK) // motor 2
+	{
+		__disable_irq();
+		while (1);
+	}
+	if(HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_3) != HAL_OK) // motor 3
+	{
+		__disable_irq();
+		while (1);
+	}
+	if(HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_4) != HAL_OK) // motor 4
+	{
+		__disable_irq();
+		while (1);
+	}
+}
+
+static void MX_TIM4_Init(void)
+{
+	/* ---- 1. Enable clocks first ---- */
+	__HAL_RCC_TIM4_CLK_ENABLE();
+	__HAL_RCC_GPIOB_CLK_ENABLE();   /* likely already enabled; safe to call again */
+
+	/* ---- 2. Configure GPIO ---- */
+	/*
+	 * PB6  → TIM4_CH1  AF2
+	 * PB7  → TIM4_CH2  AF2
+	 */
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	GPIO_InitStruct.Pin       = GPIO_PIN_6 | GPIO_PIN_7;
+	GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+	GPIO_InitStruct.Pull      = GPIO_NOPULL;
+	GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_LOW;
+	GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+	/* ---- 3. Configure timer ---- */
+	htim4.Instance               = TIM4;
+	htim4.Init.Prescaler         = TIM_PRESCALER;
+	htim4.Init.CounterMode       = TIM_COUNTERMODE_UP;
+	htim4.Init.Period            = TIM_PERIOD;
+	htim4.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+	htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+
+	if(HAL_TIM_PWM_Init(&htim4) != HAL_OK)
+	{
+		__disable_irq();
+		while (1);
+	}
+
+	/* ---- 4. Configure channels ---- */
+	TIM_OC_InitTypeDef sConfigOC = {0};
+	sConfigOC.OCMode       = TIM_OCMODE_PWM1;
+	sConfigOC.Pulse        = MOTOR_PWM_MIN;
+	sConfigOC.OCPolarity   = TIM_OCPOLARITY_HIGH;
+	sConfigOC.OCFastMode   = TIM_OCFAST_DISABLE;
+
+	if(HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK) // motor 5
+	{
+		__disable_irq();
+		while (1);
+	}
+	if(HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_2) != HAL_OK) // motor 6
+	{
+		__disable_irq();
+		while (1);
+	}
 }
