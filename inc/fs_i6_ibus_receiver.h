@@ -38,7 +38,7 @@ struct fs_i6_ibus
 
 void init_fs_i6_ibus_receiver(fs_i6_ibus* mod_fsi6, UART_HandleTypeDef* huart);
 
-// to be called asynchnously in interrupt
+// to be called asynchronously in interrupt
 void accept_byte_for_fs_i6_ibus(fs_i6_ibus* mod_fsi6);
 
 // if there is new data available it is all parsed and latest one is returned

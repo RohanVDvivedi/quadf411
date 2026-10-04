@@ -14,12 +14,14 @@
 #include<hmc5883l.h>
 #include<ms5611.h>
 #include<fs_i6_ibus_receiver.h>
+#include<neo_6m.h>
 
 adxl345 mod_accl;
 itg3205 mod_gyro;
 hmc5883l mod_magn;
 ms5611 mod_baro;
 fs_i6_ibus mod_fs_i6_ibus;
+neo_6m mod_neo_6m;
 
 void SysTick_Handler(void)
 {
@@ -40,6 +42,13 @@ void USART2_IRQHandler(void)
 	HAL_UART_IRQHandler(&huart2);
 }
 
+UART_HandleTypeDef huart6;
+
+void USART6_IRQHandler(void)
+{
+	HAL_UART_IRQHandler(&huart6);
+}
+
 volatile uint8_t uart_tx_ready = 1;
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -51,6 +60,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if(huart == mod_fs_i6_ibus.huart)
 		accept_byte_for_fs_i6_ibus(&mod_fs_i6_ibus);
+	if(huart == mod_neo_6m.huart)
+		accept_byte_for_neo_6m(&mod_neo_6m);
 }
 
 I2C_HandleTypeDef hi2c1;
@@ -108,6 +119,7 @@ static void SystemClock_Config(void);
 static void GPIO_Init(void);
 static void UART1_Init(UART_HandleTypeDef* huart1);
 static void UART2_Init(UART_HandleTypeDef* huart2);
+static void UART6_Init(UART_HandleTypeDef* huart6);
 static void I2C1_Init(I2C_HandleTypeDef* hi2c1);
 
 static void MX_TIM3_Init(void);
@@ -127,6 +139,7 @@ int write_board_motor_pwn(int motor_no, uint16_t pulse_width_in_us) // for escs 
 		case 6 : __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, pulse_width_in_us); break;
 		default : return 0;
 	}
+	return 1;
 }
 
 int main(void)
@@ -145,6 +158,7 @@ int main(void)
 	// setup UART at baud of 115200
 	UART1_Init(&huart1);
 	UART2_Init(&huart2);
+	UART6_Init(&huart6);
 
 	// setup I2C at baud of 100000
 	I2C1_Init(&hi2c1);
@@ -186,6 +200,8 @@ int main(void)
 
 	init_fs_i6_ibus_receiver(&mod_fs_i6_ibus, &huart2);
 
+	init_neo_6m(&mod_neo_6m, &huart6);
+
 	if(failed)
 		while(1);
 
@@ -208,6 +224,9 @@ int main(void)
 
 	int receiver_channels_data_valid = 0;
 	fs_i6_data receiver_channels_data = {};
+
+	int gps_data_valid = 0;
+	neo_6m_data gps_data = {};
 
 	uint32_t last_print_at = HAL_GetTick();
 	uint32_t print_period = 1000; // print every 1000 millis
@@ -351,16 +370,23 @@ int main(void)
 			receiver_channels_data = _receiver_channels_data;
 			receiver_channels_data_valid = 1;
 
-
 			// write directly to motor 5 and 6
 			write_board_motor_pwn(5, receiver_channels_data.channels[0]);
 			write_board_motor_pwn(6, receiver_channels_data.channels[1]);
 		}
 
+		new_data_arrived = 0;
+		neo_6m_data _gps_data = get_neo_6m(&mod_neo_6m, &huart1, &new_data_arrived);
+		if(new_data_arrived)
+		{
+			gps_data = _gps_data;
+			gps_data_valid = 1;
+		}
+
 		if(HAL_GetTick() >= last_print_at + print_period)
 		{
-			sprintf(debug_buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
-			HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));
+			/*sprintf(debug_buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
+			HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));*/
 			/*sprintf(debug_buffer, "abs_pitch=%f \t abs_roll=%f\n", abs_pitch, abs_roll);
 			HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));*/
 			/*if(receiver_channels_data_valid)
@@ -495,6 +521,34 @@ static void UART2_Init(UART_HandleTypeDef* huart2)
 
 	HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);
 	HAL_NVIC_EnableIRQ(USART2_IRQn);
+}
+
+static void UART6_Init(UART_HandleTypeDef* huart6)
+{
+	__HAL_RCC_USART6_CLK_ENABLE();
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+
+	GPIO_InitTypeDef gpio = {0};
+	gpio.Pin       = GPIO_PIN_11 | GPIO_PIN_12;
+	gpio.Mode      = GPIO_MODE_AF_PP;
+	gpio.Pull      = GPIO_NOPULL;
+	gpio.Speed     = GPIO_SPEED_FREQ_VERY_HIGH;
+	gpio.Alternate = GPIO_AF8_USART6;
+	HAL_GPIO_Init(GPIOA, &gpio);
+
+	huart6->Instance          = USART6;
+	huart6->Init.BaudRate     = 9600;
+	huart6->Init.WordLength   = UART_WORDLENGTH_8B;
+	huart6->Init.StopBits     = UART_STOPBITS_1;
+	huart6->Init.Parity       = UART_PARITY_NONE;
+	huart6->Init.Mode         = UART_MODE_TX_RX;
+	huart6->Init.HwFlowCtl    = UART_HWCONTROL_NONE;
+	huart6->Init.OverSampling = UART_OVERSAMPLING_16;
+
+	HAL_UART_Init(huart6);
+
+	HAL_NVIC_SetPriority(USART6_IRQn, 5, 0);
+	HAL_NVIC_EnableIRQ(USART6_IRQn);
 }
 
 /* ---------------- I2C ---------------- */
