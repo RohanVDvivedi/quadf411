@@ -16,7 +16,7 @@ int init_adxl345(adxl345* mod_accl, I2C_HandleTypeDef* hi2c, uint8_t i2c_addr, d
 	HAL_I2C_Mem_Write(hi2c, (mod_accl->i2c_addr) << 1, 0x2c, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x0f}), 1, HAL_MAX_DELAY);
 
 	// put it in full res mode at 4g
-	HAL_I2C_Mem_Write(hi2c, (mod_accl->i2c_addr) << 1, 0x31, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x09}), 1, HAL_MAX_DELAY);
+	HAL_I2C_Mem_Write(hi2c, (mod_accl->i2c_addr) << 1, 0x31, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x0a}), 1, HAL_MAX_DELAY);
 
 	// put it in measuring mode
 	HAL_I2C_Mem_Write(hi2c, (mod_accl->i2c_addr) << 1, 0x2d, I2C_MEMADD_SIZE_8BIT, ((uint8_t[]){0x08}), 1, HAL_MAX_DELAY);

@@ -260,11 +260,11 @@ int main(void)
 			if(!is_valid_boot_time_accl_data)
 			{
 				is_valid_boot_time_accl_data = (HAL_GetTick() > 300); // wait for 300 millis
-				boot_time_accl_data = vector_mul_scalar(_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
+				boot_time_accl_data = vector_mul_scalar(_accl_data, 8.0/1000.0); // convert to number of g-s of acceleration
 			}
 			else
 			{
-				accl_data = vector_mul_scalar(_accl_data, 4.0/1000.0); // convert to number of g-s of acceleration
+				accl_data = vector_mul_scalar(_accl_data, 8.0/1000.0); // convert to number of g-s of acceleration
 
 				// use accl_data
 				{
