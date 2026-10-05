@@ -38,8 +38,8 @@ neo_6m_data get_neo_6m(neo_6m* mod_neo_6m, UART_HandleTypeDef* huart_temp, int* 
 		(*new_data_arrived) = 1;
 		mod_neo_6m->last_read_in_millis = HAL_GetTick();
 		uint32_t debug_bytes = read_from_dpipe(&(mod_neo_6m->unparsed_bytes), debug_buffer, sizeof(debug_buffer), PARTIAL_ALLOWED);
-		if(debug_bytes > 0)
-			HAL_UART_Transmit_IT(huart_temp, (uint8_t*)debug_buffer, debug_bytes);
+		/*if(debug_bytes > 0)
+			HAL_UART_Transmit_IT(huart_temp, (uint8_t*)debug_buffer, debug_bytes);*/
 	}
 
 	// enable interrupts back

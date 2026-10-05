@@ -385,8 +385,8 @@ int main(void)
 
 		if(HAL_GetTick() >= last_print_at + print_period)
 		{
-			/*sprintf(debug_buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
-			HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));*/
+			sprintf(debug_buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
+			HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));
 			/*sprintf(debug_buffer, "abs_pitch=%f \t abs_roll=%f\n", abs_pitch, abs_roll);
 			HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));*/
 			/*if(receiver_channels_data_valid)
@@ -567,7 +567,7 @@ static void I2C1_Init(I2C_HandleTypeDef* hi2c1)
 	HAL_GPIO_Init(GPIOB, &gpio);
 
 	hi2c1->Instance = I2C1;
-	hi2c1->Init.ClockSpeed = 100000;
+	hi2c1->Init.ClockSpeed = 400000;
 	hi2c1->Init.DutyCycle = I2C_DUTYCYCLE_2;
 	hi2c1->Init.OwnAddress1 = 0;
 	hi2c1->Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
