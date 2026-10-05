@@ -7,8 +7,6 @@
 
 #include<cutlery/dpipe.h>
 
-#include<cutlery/dpipe.h>
-
 #include<adxl345.h>
 #include<itg3205.h>
 #include<hmc5883l.h>
