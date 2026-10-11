@@ -16,7 +16,7 @@ struct neo_6m_data
 	double altitude;
 };
 
-#define BUFFER_BYTES 2048
+#define BUFFER_BYTES 256
 
 typedef struct neo_6m neo_6m;
 struct neo_6m
