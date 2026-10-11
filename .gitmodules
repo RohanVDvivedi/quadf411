@@ -7,3 +7,6 @@
 [submodule "deps/cutlery"]
 	path = deps/cutlery
 	url = git@github.com:RohanVDvivedi/Cutlery.git
+[submodule "deps/pidcontroller"]
+	path = deps/pidcontroller
+	url = git@github.com:RohanVDvivedi/PIDcontroller.git
