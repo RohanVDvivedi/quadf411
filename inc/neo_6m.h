@@ -16,6 +16,13 @@ struct neo_6m_data
 	double altitude;
 };
 
+#include<cutlery/value_arraylist.h>
+
+data_definitions_value_arraylist(buffer_read_sizes, uint32_t)
+declarations_value_arraylist(buffer_read_sizes, uint32_t, static inline) // last parameter can be empty
+#define EXPANSION_FACTOR 1.5
+function_definitions_value_arraylist(buffer_read_sizes, uint32_t, static inline) // last parameter can be empty
+
 #define BUFFER_BYTES 256
 
 typedef struct neo_6m neo_6m;
@@ -28,8 +35,10 @@ struct neo_6m
 	uint32_t last_read_in_millis;
 
 	dpipe unparsed_bytes;
+	buffer_read_sizes unparsed_sentence_sizes;
 
 	uint8_t unparsed_bytes_buffer[BUFFER_BYTES];
+	uint32_t unparsed_sentence_sizes_buffer[BUFFER_BYTES / 3]; // over capacity
 
 	UART_HandleTypeDef* huart;
 };
