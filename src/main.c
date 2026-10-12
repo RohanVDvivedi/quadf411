@@ -223,7 +223,9 @@ int main(void)
 	int receiver_channels_data_valid = 0;
 	fs_i6_data receiver_channels_data = {};
 
-	int gps_data_valid = 0;
+	int gps_position_valid = 0;
+	int gps_altitude_valid = 0;
+	int gps_velocity_valid = 0;
 	neo_6m_data gps_data = {};
 
 	uint32_t last_print_at = HAL_GetTick();
@@ -233,6 +235,7 @@ int main(void)
 	int gyro_samples = 0;
 	int magn_samples = 0;
 	int baro_samples = 0;
+	int gps_samples = 0;
 
 	// right before the controller is ready then start att motors
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
@@ -373,12 +376,35 @@ int main(void)
 			write_board_motor_pwn(6, receiver_channels_data.channels[1]);
 		}
 
-		new_data_arrived = 0;
-		neo_6m_data _gps_data = get_neo_6m(&mod_neo_6m, &huart1, &new_data_arrived);
-		if(new_data_arrived)
+		int new_gps_position_arrived = 0;
+		int new_gps_altitude_arrived = 0;
+		int new_gps_velocity_arrived = 0;
+		neo_6m_data _gps_data = get_neo_6m(&mod_neo_6m, &new_gps_position_arrived, &new_gps_altitude_arrived, &new_gps_velocity_arrived);
+		if(new_gps_position_arrived)
 		{
-			gps_data = _gps_data;
-			gps_data_valid = 1;
+			gps_samples++;
+
+			gps_data.latitude = _gps_data.latitude;
+			gps_data.longitude = _gps_data.longitude;
+
+			gps_position_valid = 1;
+		}
+		if(new_gps_altitude_arrived)
+		{
+			gps_samples++;
+
+			gps_data.altitude = _gps_data.altitude;
+
+			gps_altitude_valid = 1;
+		}
+		if(new_gps_velocity_arrived)
+		{
+			gps_samples++;
+
+			gps_data.speed = _gps_data.speed;
+			gps_data.heading = _gps_data.heading;
+
+			gps_velocity_valid = 1;
 		}
 
 		if(HAL_GetTick() >= last_print_at + print_period)
@@ -392,6 +418,11 @@ int main(void)
 				sprintf(debug_buffer, "receiver_data[0]=%hu \t receiver_data[1]=%hu \t receiver_data[2]=%hu \t receiver_data[3]=%hu\n", receiver_channels_data.channels[0], receiver_channels_data.channels[1], receiver_channels_data.channels[2], receiver_channels_data.channels[3]);
 				HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));
 			}*/
+			if(gps_position_valid || gps_altitude_valid || gps_velocity_valid)
+			{
+				sprintf(debug_buffer, "latitude=%lf \t longitude=%lf \t altitude=%lf \t speed=%lf \t heading=%lf\n", (gps_position_valid ? gps_data.latitude : NAN), (gps_position_valid ? gps_data.longitude : NAN), (gps_altitude_valid ? gps_data.altitude : NAN), (gps_velocity_valid ? gps_data.speed : NAN), (gps_velocity_valid ? gps_data.heading : NAN));
+				HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));
+			}
 			last_print_at = HAL_GetTick();
 			accl_samples = 0;
 			gyro_samples = 0;

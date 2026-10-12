@@ -56,6 +56,6 @@ void init_neo_6m(neo_6m* mod_neo_6m, UART_HandleTypeDef* huart);
 void accept_byte_for_neo_6m(neo_6m* mod_neo_6m);
 
 // if there is new data available it is all parsed and latest one is returned
-neo_6m_data get_neo_6m(neo_6m* mod_neo_6m, UART_HandleTypeDef* huart_temp, int* new_position_arrived, int* new_altitude_arrived, int* new_velocity_arrived);
+neo_6m_data get_neo_6m(neo_6m* mod_neo_6m, int* new_position_arrived, int* new_altitude_arrived, int* new_velocity_arrived);
 
 #endif
