@@ -203,11 +203,13 @@ int main(void)
 	if(failed)
 		while(1);
 
+	#define GYRO_AVERAGE_SAMPLES 500
+	#define ACCL_INIT_AFTER_MILLIS 300
+
 	int is_valid_boot_time_accl_data = 0;
 	vector boot_time_accl_data = {};
-	vector average_gyro_data = {};
-	#define GYRO_AVERAGE_SAMPLES 500
-	uint32_t gyro_init_samples = 0;
+	int is_valid_boot_time_gyro_data = 0;
+	vector boot_time_gyro_data = {};
 	int is_valid_boot_time_magn_data = 0;
 	vector boot_time_magn_data = {};
 
@@ -247,27 +249,96 @@ int main(void)
 
 	while(1)
 	{
-		int new_data_arrived;
+		// read all sensors first
 
-		new_data_arrived = 0;
-		vector _accl_data = get_adxl345(&mod_accl, &new_data_arrived);
-		if(new_data_arrived)
+		int new_accl_data_arrived = 0;
 		{
-			accl_samples++;
+			vector _accl_data = get_adxl345(&mod_accl, &new_accl_data_arrived);
+			if(new_accl_data_arrived)
+			{
+				accl_samples++;
 
-			if(t_accl != 0)
-				dt_accl = (HAL_GetTick() - t_accl);
+				accl_data = vector_mul_scalar(_accl_data, 3.9/1000.0); // convert to number of g-s
 
+				if(t_accl != 0)
+					dt_accl = (HAL_GetTick() - t_accl);
+
+				t_accl = HAL_GetTick();
+			}
+		}
+
+		int new_gyro_data_arrived = 0;
+		{
+			vector _gyro_data = get_itg3205(&mod_gyro, &new_gyro_data_arrived);
+			if(new_gyro_data_arrived)
+			{
+				gyro_samples++;
+
+				gyro_data = vector_mul_scalar(_gyro_data, 1.0/14.375); // convert to degrees per second
+
+				if(t_gyro != 0)
+					dt_gyro = (HAL_GetTick() - t_gyro);
+
+				t_gyro = HAL_GetTick();
+			}
+		}
+
+		int new_magn_data_arrived = 0;
+		{
+			vector _magn_data = get_hmc5883l(&mod_magn, &new_magn_data_arrived);
+			if(new_magn_data_arrived)
+			{
+				magn_samples++;
+
+				magn_data = vector_mul_scalar(_magn_data, 0.92 / 1000.0); // convert to the range in Gauss
+
+				if(t_magn != 0)
+					dt_magn = (HAL_GetTick() - t_magn);
+
+				// get time for the magn_data
+				t_magn = HAL_GetTick();
+			}
+		}
+
+		int new_baro_data_arrived = 0;
+		{
+			double _baro_data = get_ms5611(&mod_baro, &new_baro_data_arrived);
+			if(new_baro_data_arrived)
+			{
+				baro_samples++;
+
+				baro_data = _baro_data; // convert to the centimeters
+
+				if(t_baro != 0)
+					dt_baro = (HAL_GetTick() - t_baro);
+
+				// get time for the baro_data
+				t_baro = HAL_GetTick();
+			}
+		}
+
+		int new_receiver_data_arrived = 0;
+		{
+			fs_i6_data _receiver_channels_data = get_fs_i6_ibus(&mod_fs_i6_ibus, &new_receiver_data_arrived);
+			if(new_receiver_data_arrived)
+			{
+				receiver_channels_data = _receiver_channels_data;
+				receiver_channels_data_valid = 1;
+			}
+		}
+
+		// reading sensors done now act on them
+
+		// compute attitude angles
+		if(new_accl_data_arrived)
+		{
 			if(!is_valid_boot_time_accl_data)
 			{
-				is_valid_boot_time_accl_data = (HAL_GetTick() > 300); // wait for 300 millis
-				boot_time_accl_data = vector_mul_scalar(_accl_data, 3.9/1000.0); // convert to number of g-s of acceleration
+				is_valid_boot_time_accl_data = (HAL_GetTick() > ACCL_INIT_AFTER_MILLIS); // wait for time for accelerometer data
+				boot_time_accl_data = accl_data;
 			}
 			else
 			{
-				accl_data = vector_mul_scalar(_accl_data, 3.9/1000.0); // convert to number of g-s of acceleration
-
-				// use accl_data
 				{
 					vector boot_time_ay = vector_unit_dir(NULL, vector_perpendicular_component(NULL, boot_time_accl_data, unit_vector_y_axis));
 					vector curr_ay = vector_unit_dir(NULL, vector_perpendicular_component(NULL, accl_data, unit_vector_y_axis));
@@ -283,98 +354,65 @@ int main(void)
 						abs_roll = 0.98 * abs_roll + 0.02 * (_abs_roll * 180.0 / M_PI);
 				}
 			}
-
-			// get time for the accl_data
-			t_accl = HAL_GetTick();
 		}
 
-		new_data_arrived = 0;
-		vector _gyro_data = get_itg3205(&mod_gyro, &new_data_arrived);
-		if(new_data_arrived)
+		// average and fine the steady state gyro average data
+		if(new_gyro_data_arrived)
 		{
-			gyro_samples++;
-
-			if(t_gyro != 0)
-				dt_gyro = (HAL_GetTick() - t_gyro);
-
-			if(gyro_init_samples < GYRO_AVERAGE_SAMPLES)
 			{
-				average_gyro_data = vector_sum(average_gyro_data, _gyro_data);
-				gyro_init_samples++;
-				if(gyro_init_samples >= GYRO_AVERAGE_SAMPLES)
-					average_gyro_data = vector_mul_scalar(average_gyro_data, 1.0 / gyro_init_samples);
-			}
-			else
-			{
-				gyro_data = vector_mul_scalar(vector_sub(_gyro_data, average_gyro_data), 1.0/14.375); // convert to degrees per second
-
-				abs_pitch += (gyro_data.yj * (dt_gyro / 1000.0));
-				if(abs_pitch > 180)
-					abs_pitch -= 360;
-				else if(abs_pitch < -180)
-					abs_pitch += 360;
-				abs_roll += (gyro_data.xi * (dt_gyro / 1000.0));
-				if(abs_roll > 180)
-					abs_roll -= 360;
-				else if(abs_roll < -180)
-					abs_roll += 360;
+				static uint32_t gyro_init_samples = 0;
+				if(gyro_init_samples < GYRO_AVERAGE_SAMPLES)
+				{
+					boot_time_gyro_data = vector_sum(boot_time_gyro_data, gyro_data);
+					gyro_init_samples++;
+					if(gyro_init_samples >= GYRO_AVERAGE_SAMPLES)
+					{
+						boot_time_gyro_data = vector_mul_scalar(boot_time_gyro_data, 1.0 / gyro_init_samples);
+						is_valid_boot_time_gyro_data = 1;
+					}
+				}
 			}
 
-			// get time for the gyro_data
-			t_gyro = HAL_GetTick();
+			// fix attitude angles
+			if(is_valid_boot_time_gyro_data)
+			{
+				{
+					abs_pitch += (gyro_data.yj * (dt_gyro / 1000.0));
+					if(abs_pitch > 180)
+						abs_pitch -= 360;
+					else if(abs_pitch < -180)
+						abs_pitch += 360;
+				}
+				{
+					abs_roll += (gyro_data.xi * (dt_gyro / 1000.0));
+					if(abs_roll > 180)
+						abs_roll -= 360;
+					else if(abs_roll < -180)
+						abs_roll += 360;
+				}
+			}
 		}
 
-		new_data_arrived = 0;
-		vector _magn_data = get_hmc5883l(&mod_magn, &new_data_arrived);
-		if(new_data_arrived)
+		if(new_magn_data_arrived)
 		{
-			magn_samples++;
-
-			if(t_magn != 0)
-				dt_magn = (HAL_GetTick() - t_magn);
-
 			if(!is_valid_boot_time_magn_data)
 			{
 				is_valid_boot_time_magn_data = 1;
-				boot_time_magn_data = vector_mul_scalar(_magn_data, 0.92 / 1000.0); // convert to the range in Gauss
+				boot_time_magn_data = magn_data;
 			}
-			else
-			{
-				magn_data = vector_mul_scalar(_magn_data, 0.92 / 1000.0); // convert to the range in Gauss
-
-				// use magn_data
-			}
-
-			// get time for the magn_data
-			t_magn = HAL_GetTick();
 		}
 
-		new_data_arrived = 0;
-		double _baro_data = get_ms5611(&mod_baro, &new_data_arrived);
-		if(new_data_arrived)
+		if(new_receiver_data_arrived)
 		{
-			baro_samples++;
-
-			if(t_baro != 0)
-				dt_baro = (HAL_GetTick() - t_baro);
-
-			baro_data = _baro_data; // convert to the CM
-
-			// get time for the baro_data
-			t_baro = HAL_GetTick();
-		}
-
-		new_data_arrived = 0;
-		fs_i6_data _receiver_channels_data = get_fs_i6_ibus(&mod_fs_i6_ibus, &new_data_arrived);
-		if(new_data_arrived)
-		{
-			receiver_channels_data = _receiver_channels_data;
-			receiver_channels_data_valid = 1;
-
 			// write directly to motor 5 and 6
-			write_board_motor_pwn(5, receiver_channels_data.channels[0]);
-			write_board_motor_pwn(6, receiver_channels_data.channels[1]);
+			write_board_motor_pwn(1, receiver_channels_data.channels[2]);
+			write_board_motor_pwn(2, receiver_channels_data.channels[2]);
+			write_board_motor_pwn(3, receiver_channels_data.channels[2]);
+			write_board_motor_pwn(4, receiver_channels_data.channels[2]);
 		}
+
+		// gps will be processed now
+		// because it is a slow sensor
 
 		int new_gps_position_arrived = 0;
 		int new_gps_altitude_arrived = 0;
@@ -411,23 +449,27 @@ int main(void)
 		{
 			/*sprintf(debug_buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
 			HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));*/
-			/*sprintf(debug_buffer, "abs_pitch=%f \t abs_roll=%f\n", abs_pitch, abs_roll);
-			HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));*/
+			if(is_valid_boot_time_gyro_data || is_valid_boot_time_accl_data || baro_samples > 0)
+			{
+				sprintf(debug_buffer, "yaw_rate=%f \t abs_pitch=%f \t abs_roll=%f \t alti=%f\n", gyro_data.zk, abs_pitch, abs_roll, baro_data);
+				HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));
+			}
 			/*if(receiver_channels_data_valid)
 			{
 				sprintf(debug_buffer, "receiver_data[0]=%hu \t receiver_data[1]=%hu \t receiver_data[2]=%hu \t receiver_data[3]=%hu\n", receiver_channels_data.channels[0], receiver_channels_data.channels[1], receiver_channels_data.channels[2], receiver_channels_data.channels[3]);
 				HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));
 			}*/
-			if(gps_position_valid || gps_altitude_valid || gps_velocity_valid)
+			/*if(gps_position_valid || gps_altitude_valid || gps_velocity_valid)
 			{
 				sprintf(debug_buffer, "latitude=%lf \t longitude=%lf \t altitude=%lf \t speed=%lf \t heading=%lf\n", (gps_position_valid ? gps_data.latitude : NAN), (gps_position_valid ? gps_data.longitude : NAN), (gps_altitude_valid ? gps_data.altitude : NAN), (gps_velocity_valid ? gps_data.speed : NAN), (gps_velocity_valid ? gps_data.heading : NAN));
 				HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));
-			}
+			}*/
 			last_print_at = HAL_GetTick();
 			accl_samples = 0;
 			gyro_samples = 0;
 			magn_samples = 0;
 			baro_samples = 0;
+			gps_samples  = 0;
 		}
 	}
 }
