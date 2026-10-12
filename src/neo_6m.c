@@ -37,7 +37,8 @@ void accept_byte_for_neo_6m(neo_6m* mod_neo_6m)
 
 	write_to_dpipe(&(mod_neo_6m->unparsed_bytes), &(mod_neo_6m->received_byte), 1, ALL_OR_NONE);
 
-	// check tail
+	// check tail if we received a \n
+	if(mod_neo_6m->received_byte == '\n')
 	{
 		char last_2_bytes[2];
 		if(2 == get_back_of_dpipe(&(mod_neo_6m->unparsed_bytes), last_2_bytes, 2, ALL_OR_NONE) && 0 == memcmp(last_2_bytes, "\r\n", 2)) // if this is true we are at the end of the statement, i.e. we just read the last byte of the sentence
@@ -55,7 +56,7 @@ void accept_byte_for_neo_6m(neo_6m* mod_neo_6m)
 
 // if there is new data available it is all parsed and latest one is returned
 static char debug_buffer[128];
-neo_6m_data get_neo_6m(neo_6m* mod_neo_6m, UART_HandleTypeDef* huart_temp, int* new_data_arrived)
+neo_6m_data get_neo_6m(neo_6m* mod_neo_6m, UART_HandleTypeDef* huart_temp, int* new_position_arrived, int* new_altitude_arrived, int* new_velocity_arrived)
 {
 	(*new_data_arrived) = 0;
 
@@ -67,8 +68,15 @@ neo_6m_data get_neo_6m(neo_6m* mod_neo_6m, UART_HandleTypeDef* huart_temp, int* 
 		uint32_t sentence_length = *get_front_of_buffer_read_sizes(&(mod_neo_6m->unparsed_sentence_sizes));
 		char sentence[128];
 
-		// too big sentence just skip it
-		if(sentence_length > 100)
+		// too big/short sentence just skip it
+		if(sentence_length > 100 || sentence_length < 3)
+		{
+			pop_front_from_buffer_read_sizes(&(mod_neo_6m->unparsed_sentence_sizes));
+			discard_from_dpipe(&(mod_neo_6m->unparsed_bytes), sentence_length);
+			continue;
+		}
+		// must start with $ and end with \r\n
+		if(sentence[0] != '$' || sentence[sentence_length-2] != '\r' && sentence[sentence_length-1] != '\n')
 		{
 			pop_front_from_buffer_read_sizes(&(mod_neo_6m->unparsed_sentence_sizes));
 			discard_from_dpipe(&(mod_neo_6m->unparsed_bytes), sentence_length);

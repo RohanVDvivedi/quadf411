@@ -11,9 +11,16 @@
 typedef struct neo_6m_data neo_6m_data;
 struct neo_6m_data
 {
-	double latitude;
-	double longitude;
-	double altitude;
+	// position data
+	double latitude;  // in degreen (-90 to +90)
+	double longitude; // in degrees (-180 to 180)
+
+	// altitude data
+	double altitude;  // in meters
+
+	// velocity data
+	double speed;     // in meters/second
+	double heading;   // in degreed (0 to 360) from north in clockwise direction
 };
 
 #include<cutlery/value_arraylist.h>
@@ -49,6 +56,6 @@ void init_neo_6m(neo_6m* mod_neo_6m, UART_HandleTypeDef* huart);
 void accept_byte_for_neo_6m(neo_6m* mod_neo_6m);
 
 // if there is new data available it is all parsed and latest one is returned
-neo_6m_data get_neo_6m(neo_6m* mod_neo_6m, UART_HandleTypeDef* huart_temp, int* new_data_arrived);
+neo_6m_data get_neo_6m(neo_6m* mod_neo_6m, UART_HandleTypeDef* huart_temp, int* new_position_arrived, int* new_altitude_arrived, int* new_velocity_arrived);
 
 #endif
