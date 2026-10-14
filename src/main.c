@@ -7,6 +7,8 @@
 
 #include<cutlery/dpipe.h>
 
+#include<pidcontroller/pid.h>
+
 #include<adxl345.h>
 #include<itg3205.h>
 #include<hmc5883l.h>
@@ -125,7 +127,7 @@ static void MX_TIM4_Init(void);
 
 char debug_buffer[512];
 
-int write_board_motor_pwn(int motor_no, uint16_t pulse_width_in_us) // for escs write 1000 to 2000 values only here
+int write_board_motor_pwm(int motor_no, uint16_t pulse_width_in_us) // for escs write 1000 to 2000 values only here
 {
 	switch(motor_no)
 	{
@@ -238,6 +240,13 @@ int main(void)
 	int magn_samples = 0;
 	int baro_samples = 0;
 	int gps_samples = 0;
+
+	float pitch_rate_required = 0;
+	float roll_rate_required = 0;
+	pid_state pitch_rate_pid;
+	pid_state roll_rate_pid;
+	pid_init(&pitch_rate_pid, 1.0, 0.0, 0.0, 100); // motor values fluctuate no more than 100
+	pid_init(&roll_rate_pid, 1.0, 0.0, 0.0, 100); // motor values fluctuate no more than 100
 
 	// right before the controller is ready then start att motors
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
@@ -402,13 +411,57 @@ int main(void)
 			}
 		}
 
-		if(new_receiver_data_arrived)
+		if(!new_receiver_data_arrived)
 		{
-			// write directly to motor 5 and 6
-			write_board_motor_pwn(1, receiver_channels_data.channels[2]);
-			write_board_motor_pwn(2, receiver_channels_data.channels[2]);
-			write_board_motor_pwn(3, receiver_channels_data.channels[2]);
-			write_board_motor_pwn(4, receiver_channels_data.channels[2]);
+			// kill the quad if the receiver signal breaks
+			if(HAL_GetTick() - mod_fs_i6_ibus.last_read_in_millis >= 2000)
+			{
+				pitch_rate_required = 0;
+				roll_rate_required = 0;
+				pid_reinit(&pitch_rate_pid);
+				pid_reinit(&roll_rate_pid);
+				write_board_motor_pwm(1, 1000);
+				write_board_motor_pwm(2, 1000);
+				write_board_motor_pwm(3, 1000);
+				write_board_motor_pwm(4, 1000);
+				write_board_motor_pwm(5, 1000);
+				write_board_motor_pwm(6, 1000);
+				__disable_irq();
+				while(1);
+			}
+		}
+		else
+		{
+			pitch_rate_required = (receiver_channels_data.channels[1] - 1500.0) * (40.0 / 500.0);
+			roll_rate_required = (receiver_channels_data.channels[0] - 1500.0) * (40.0 / 500.0);
+		}
+
+		// pid attitude
+		if(is_valid_boot_time_gyro_data && is_valid_boot_time_accl_data)
+		{
+
+		}
+
+		// pid rate
+		if(is_valid_boot_time_gyro_data)
+		{
+			HAL_UART_Transmit(&huart1, "IN \n", 3, HAL_MAX_DELAY);
+			static uint32_t last_rate_pid_update_at_in_millis = 0;
+			if(last_rate_pid_update_at_in_millis == 0)
+				last_rate_pid_update_at_in_millis = HAL_GetTick();
+			else if(last_rate_pid_update_at_in_millis != 0 && (HAL_GetTick() - last_rate_pid_update_at_in_millis) >= 2)
+			{
+				HAL_UART_Transmit(&huart1, "OUT\n", 4, HAL_MAX_DELAY);
+				float pitch_diff = pid_update(&pitch_rate_pid, gyro_data.yj, pitch_rate_required);
+				float roll_diff = pid_update(&roll_rate_pid, gyro_data.xi, roll_rate_required);
+
+				write_board_motor_pwm(1, min(max(1000 + (receiver_channels_data.channels[2] - 1000) - pitch_diff + roll_diff, 1000), 2000));
+				write_board_motor_pwm(2, min(max(1000 + (receiver_channels_data.channels[2] - 1000) + pitch_diff + roll_diff, 1000), 2000));
+				write_board_motor_pwm(3, min(max(1000 + (receiver_channels_data.channels[2] - 1000) - pitch_diff - roll_diff, 1000), 2000));
+				write_board_motor_pwm(4, min(max(1000 + (receiver_channels_data.channels[2] - 1000) + pitch_diff - roll_diff, 1000), 2000));
+
+				last_rate_pid_update_at_in_millis = HAL_GetTick();
+			}
 		}
 
 		// gps will be processed now
@@ -449,11 +502,11 @@ int main(void)
 		{
 			/*sprintf(debug_buffer, "ax=%f, ay=%f, az=%f, a_samples = %d, gx=%f, gy=%f, gz=%f, g_samples=%d, mx=%f, my=%f, mz=%f, m_samples=%d, z_pos = %f, b_samples=%d\n", accl_data.xi, accl_data.yj, accl_data.zk, accl_samples, gyro_data.xi, gyro_data.yj, gyro_data.zk, gyro_samples, magn_data.xi, magn_data.yj, magn_data.zk, magn_samples, baro_data, baro_samples);
 			HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));*/
-			if(is_valid_boot_time_gyro_data || is_valid_boot_time_accl_data || baro_samples > 0)
+			/*if(is_valid_boot_time_gyro_data || is_valid_boot_time_accl_data || baro_samples > 0)
 			{
 				sprintf(debug_buffer, "yaw_rate=%f \t abs_pitch=%f \t abs_roll=%f \t alti=%f\n", gyro_data.zk, abs_pitch, abs_roll, baro_data);
 				HAL_UART_Transmit_IT(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer));
-			}
+			}*/
 			/*if(receiver_channels_data_valid)
 			{
 				sprintf(debug_buffer, "receiver_data[0]=%hu \t receiver_data[1]=%hu \t receiver_data[2]=%hu \t receiver_data[3]=%hu\n", receiver_channels_data.channels[0], receiver_channels_data.channels[1], receiver_channels_data.channels[2], receiver_channels_data.channels[3]);
