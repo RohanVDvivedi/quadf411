@@ -445,13 +445,12 @@ int main(void)
 		// pid rate
 		if(is_valid_boot_time_gyro_data)
 		{
-			HAL_UART_Transmit(&huart1, "IN \n", 3, HAL_MAX_DELAY);
+			
 			static uint32_t last_rate_pid_update_at_in_millis = 0;
 			if(last_rate_pid_update_at_in_millis == 0)
 				last_rate_pid_update_at_in_millis = HAL_GetTick();
 			else if(last_rate_pid_update_at_in_millis != 0 && (HAL_GetTick() - last_rate_pid_update_at_in_millis) >= 2)
 			{
-				HAL_UART_Transmit(&huart1, "OUT\n", 4, HAL_MAX_DELAY);
 				float pitch_diff = pid_update(&pitch_rate_pid, gyro_data.yj, pitch_rate_required);
 				float roll_diff = pid_update(&roll_rate_pid, gyro_data.xi, roll_rate_required);
 
