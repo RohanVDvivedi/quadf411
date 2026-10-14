@@ -245,8 +245,8 @@ int main(void)
 	float roll_rate_required = 0;
 	pid_state pitch_rate_pid;
 	pid_state roll_rate_pid;
-	pid_init(&pitch_rate_pid, 1.0, 0.0, 0.0, 100); // motor values fluctuate no more than 100
-	pid_init(&roll_rate_pid, 1.0, 0.0, 0.0, 100); // motor values fluctuate no more than 100
+	pid_init(&pitch_rate_pid, 2.75, 0.008, 0.0, 130); // motor values fluctuate no more than 100
+	pid_init(&roll_rate_pid,  2.75, 0.008, 0.0, 130); // motor values fluctuate no more than 100
 
 	// right before the controller is ready then start att motors
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
@@ -432,8 +432,15 @@ int main(void)
 		}
 		else
 		{
-			pitch_rate_required = (receiver_channels_data.channels[1] - 1500.0) * (40.0 / 500.0);
-			roll_rate_required = (receiver_channels_data.channels[0] - 1500.0) * (40.0 / 500.0);
+			pitch_rate_required = (receiver_channels_data.channels[1] - 1500.0) * (30.0 / 500.0);
+			roll_rate_required = (receiver_channels_data.channels[0] - 1500.0) * (30.0 / 500.0);
+
+			// throttle too low, reset pids
+			if(receiver_channels_data.channels[2] <= 1100)
+			{
+				pid_reinit(&pitch_rate_pid);
+				pid_reinit(&roll_rate_pid);
+			}
 		}
 
 		// pid attitude
@@ -451,8 +458,8 @@ int main(void)
 				last_rate_pid_update_at_in_millis = HAL_GetTick();
 			else if(last_rate_pid_update_at_in_millis != 0 && (HAL_GetTick() - last_rate_pid_update_at_in_millis) >= 2)
 			{
-				float pitch_diff = pid_update(&pitch_rate_pid, gyro_data.yj, pitch_rate_required);
-				float roll_diff = pid_update(&roll_rate_pid, gyro_data.xi, roll_rate_required);
+				float pitch_diff = (receiver_channels_data.channels[2] <= 1100) ? 0 : pid_update(&pitch_rate_pid, gyro_data.yj, pitch_rate_required);
+				float roll_diff = (receiver_channels_data.channels[2] <= 1100) ? 0 : pid_update(&roll_rate_pid, gyro_data.xi, roll_rate_required);
 
 				write_board_motor_pwm(1, min(max(1000 + (receiver_channels_data.channels[2] - 1000) - pitch_diff + roll_diff, 1000), 2000));
 				write_board_motor_pwm(2, min(max(1000 + (receiver_channels_data.channels[2] - 1000) + pitch_diff + roll_diff, 1000), 2000));
